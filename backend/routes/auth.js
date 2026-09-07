@@ -39,10 +39,10 @@ router.get('/github',
     passport.authenticate('github', { scope: ['user:email'] }));
 
 router.get('/github/callback',
-    passport.authenticate('github', { failureRedirect: '/login.html' }),
+    passport.authenticate('github', { failureRedirect: '/' }),
     function (req, res) {
         // Successful authentication, redirect to dashboard.
-        res.redirect('/dashboard.html');
+        res.redirect('/');
     });
 
 router.get('/check', (req, res) => {
