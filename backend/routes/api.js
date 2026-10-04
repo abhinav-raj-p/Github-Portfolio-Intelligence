@@ -89,12 +89,36 @@ Identify their strengths and give 2 clear, actionable recommendations on how to 
             }
         }
 
-        const topRepos = reposData.sort((a, b) => b.stargazers_count - a.stargazers_count).slice(0, 10).map(repo => ({
-            name: repo.name,
-            description: repo.description,
-            stargazers_count: repo.stargazers_count,
-            language: repo.language,
-            updated_at: repo.updated_at
+        // Only deeply scan the top 5 repos to avoid extreme API rate limits
+        const top5Repos = reposData.sort((a, b) => b.stargazers_count - a.stargazers_count).slice(0, 5);
+
+        const enrichedRepos = await Promise.all(top5Repos.map(async repo => {
+            let apkUrl = null;
+            let hasReadme = false;
+            try {
+                // Try to find an APK release
+                const relResp = await axios.get(`https://api.github.com/repos/${username}/${repo.name}/releases/latest`, { headers: authHeader });
+                const assets = relResp.data.assets || [];
+                const apkAsset = assets.find(a => a.name.endsWith('.apk'));
+                if (apkAsset) apkUrl = apkAsset.browser_download_url;
+            } catch (e) { } // Ignore 404s for no releases
+
+            try {
+                // Check if README exists to bump documentation score visually
+                await axios.head(`https://api.github.com/repos/${username}/${repo.name}/readme`, { headers: authHeader });
+                hasReadme = true;
+            } catch (e) { }
+
+            return {
+                name: repo.name,
+                description: repo.description,
+                stargazers_count: repo.stargazers_count,
+                language: repo.language,
+                updated_at: repo.updated_at,
+                homepage: repo.homepage || null, // Check for live links
+                apkUrl: apkUrl,
+                hasReadme: hasReadme
+            };
         }));
 
         const report = {
@@ -108,7 +132,7 @@ Identify their strengths and give 2 clear, actionable recommendations on how to 
             top_languages: languageCounts,
             scores: scoreBreakdown,
             aiSummary: aiSummary,
-            repositories: topRepos
+            repositories: enrichedRepos
         };
 
         res.json(report);
@@ -155,8 +179,6 @@ router.get('/favorites', async (req, res) => {
     }
 });
 
-module.exports = router;
-
 // Get commits for a repo
 router.get('/commits/:username/:repo', async (req, res) => {
     try {
@@ -177,3 +199,90 @@ router.get('/commits/:username/:repo', async (req, res) => {
         res.status(500).json({ error: "Could not fetch commits." });
     }
 });
+
+// Suggest profile fixes
+router.get('/suggest-fixes', async (req, res) => {
+    if (!req.isAuthenticated() || !process.env.OPENAI_API_KEY) {
+        return res.status(401).json({ error: "Unauthorized or missing OpenAI key" });
+    }
+    try {
+        const userResp = await axios.get('https://api.github.com/user', {
+            headers: { Authorization: `token ${req.user.accessToken}` }
+        });
+        const profile = userResp.data;
+
+        // Fetch top languages to suggest a better bio
+        const reposResp = await axios.get(`https://api.github.com/user/repos?per_page=50`, {
+            headers: { Authorization: `token ${req.user.accessToken}` }
+        });
+        let languages = new Set();
+        reposResp.data.forEach(r => { if (r.language) languages.add(r.language); });
+
+        let suggestions = {};
+        if (!profile.bio) {
+            const prompt = `Write a short, professional GitHub bio (max 160 characters) for a software developer specializing in ${Array.from(languages).join(', ')}. Return ONLY the bio text without quotes.`;
+            const openaiResp = await axios.post('https://api.openai.com/v1/chat/completions', {
+                model: "gpt-3.5-turbo",
+                messages: [{ "role": "user", "content": prompt }]
+            }, { headers: { 'Authorization': `Bearer ${process.env.OPENAI_API_KEY}` } });
+            suggestions.bio = openaiResp.data.choices[0].message.content.replace(/["']/g, '');
+        }
+        if (!profile.location) {
+            suggestions.location = "Earth";
+        }
+        if (!profile.blog) {
+            suggestions.blog = "https://github.com/" + profile.login;
+        }
+
+        res.json({ suggestions, raw: profile });
+    } catch (err) {
+        console.error(err.response?.data || err.message);
+        res.status(500).json({ error: "Failed to generate suggestions." });
+    }
+});
+
+// Apply profile fixes
+router.post('/apply-fixes', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ error: "Unauthorized" });
+    try {
+        const updates = req.body; // e.g. { bio: "...", location: "..." }
+        const patchResp = await axios.patch('https://api.github.com/user', updates, {
+            headers: {
+                Authorization: `token ${req.user.accessToken}`,
+                Accept: 'application/vnd.github.v3+json'
+            }
+        });
+        res.json({ success: true, profile: patchResp.data });
+    } catch (err) {
+        console.error(err.response?.data || err.message);
+        res.status(500).json({ error: "Failed to update GitHub profile." });
+    }
+});
+
+// Draft pitch for recruiter
+router.post('/draft-pitch', async (req, res) => {
+    if (!process.env.OPENAI_API_KEY) {
+        return res.status(500).json({ error: "OpenAI API key missing." });
+    }
+    try {
+        const candidate = req.body;
+        const topLanguages = Object.keys(candidate.top_languages || {}).slice(0, 3).join(', ');
+
+        const prompt = `Write a personalized, professional, and exciting 3-paragraph recruitment outreach email to ${candidate.name || candidate.username}. 
+Mention their top skills: ${topLanguages}, and subtly compliment their objective developer algorithm score of ${candidate.scores.total}/100. 
+Make the pitch engaging for a SaaS company. Do not use generic subject lines. Provide the raw text for the email, use [insert company] tokens for things the recruiter usually fills.`;
+
+        const openaiResp = await axios.post('https://api.openai.com/v1/chat/completions', {
+            model: "gpt-3.5-turbo",
+            messages: [{ role: "user", content: prompt }]
+        }, { headers: { 'Authorization': `Bearer ${process.env.OPENAI_API_KEY}` } });
+
+        res.json({ emailText: openaiResp.data.choices[0].message.content });
+    } catch (err) {
+        console.error(err.response?.data || err.message);
+        res.status(500).json({ error: "Failed to generate AI pitch draft." });
+    }
+});
+
+module.exports = router;
+

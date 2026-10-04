@@ -36,7 +36,7 @@ if (process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET) {
 }
 
 router.get('/github',
-    passport.authenticate('github', { scope: ['user:email'] }));
+    passport.authenticate('github', { scope: ['user'] }));
 
 router.get('/github/callback',
     passport.authenticate('github', { failureRedirect: '/' }),

@@ -18,6 +18,24 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     let currentRole = 'aspirant';
     let currentReport = null; // store current fetched report
+    let currentFixes = null; // store AI generated fixes
+    let radarChartInstance = null; // Chart.js instance tracking
+
+    // Improve profile modal elements
+    const aspirantActions = document.getElementById('aspirant-actions');
+    const improveProfileBtn = document.getElementById('improve-profile-btn');
+    const improveModal = document.getElementById('improve-modal');
+    const closeImproveModal = document.getElementById('close-improve-modal');
+    const improveLoading = document.getElementById('improve-loading');
+    const improveSuggestions = document.getElementById('improve-suggestions');
+    const applyFixesBtn = document.getElementById('apply-fixes-btn');
+
+    // Pitch elements
+    const pitchModal = document.getElementById('pitch-modal');
+    const closePitchModal = document.getElementById('close-pitch-modal');
+    const pitchLoading = document.getElementById('pitch-loading');
+    const pitchTextarea = document.getElementById('pitch-textarea');
+    const copyPitchBtn = document.getElementById('copy-pitch-btn');
 
     // Check Authentication
     try {
@@ -126,12 +144,141 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
             commitsList.innerHTML = data.map(c => `
                 <div class="commit-item">
-                    <p><strong>${c.message.split('\\n')[0]}</strong></p>
+                    <p><strong>${c.message.split('\n')[0]}</strong></p>
                     <small>${new Date(c.date).toLocaleString()} - <a href="${c.url}" target="_blank" style="color:var(--text-light-blue)">View on GitHub</a></small>
                 </div>
             `).join('');
         } catch (err) {
             commitsList.innerHTML = `<p style="color:red">Failed to load commits.</p>`;
+        }
+    };
+
+    improveProfileBtn.addEventListener('click', async () => {
+        improveModal.style.display = 'flex';
+        improveLoading.style.display = 'block';
+        improveSuggestions.style.display = 'none';
+        applyFixesBtn.style.display = 'none';
+
+        try {
+            const res = await fetch('/api/suggest-fixes');
+            const data = await res.json();
+
+            improveLoading.style.display = 'none';
+            if (data.error) {
+                improveSuggestions.innerHTML = `<p style="color:red">Error: ${data.error}</p>`;
+                improveSuggestions.style.display = 'block';
+                return;
+            }
+
+            currentFixes = data.suggestions;
+
+            if (Object.keys(currentFixes).length === 0) {
+                improveSuggestions.innerHTML = `<p>Your profile is already perfect! No missing fields detected.</p>`;
+                improveSuggestions.style.display = 'block';
+                return;
+            }
+
+            let html = `<p>We noticed some empty fields on your GitHub. Here's what our AI suggests you add:</p><ul>`;
+            for (const [key, val] of Object.entries(currentFixes)) {
+                html += `<li style="margin-bottom:10px;"><strong>${key.toUpperCase()}:</strong> ${val}</li>`;
+            }
+            html += `</ul>`;
+
+            improveSuggestions.innerHTML = html;
+            improveSuggestions.style.display = 'block';
+            applyFixesBtn.style.display = 'block';
+
+        } catch (err) {
+            improveLoading.style.display = 'none';
+            improveSuggestions.innerHTML = `<p style="color:red">Failed to fetch AI suggestions.</p>`;
+            improveSuggestions.style.display = 'block';
+        }
+    });
+
+    closeImproveModal.addEventListener('click', () => {
+        improveModal.style.display = 'none';
+    });
+
+    applyFixesBtn.addEventListener('click', async () => {
+        if (!currentFixes) return;
+        applyFixesBtn.disabled = true;
+        applyFixesBtn.innerText = 'Applying fixes to GitHub...';
+
+        try {
+            const res = await fetch('/api/apply-fixes', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(currentFixes)
+            });
+            const data = await res.json();
+
+            if (data.success) {
+                applyFixesBtn.innerText = 'Success! Profile Updated.';
+                setTimeout(() => {
+                    improveModal.style.display = 'none';
+                    applyFixesBtn.disabled = false;
+                    applyFixesBtn.innerText = 'Fix It For Me (Apply to GitHub)';
+                    // Re-analyze to pull their new scores
+                    if (currentReport) analyzeUser(currentReport.username);
+                }, 2000);
+            } else {
+                applyFixesBtn.innerText = 'Error applying fixes';
+                setTimeout(() => {
+                    applyFixesBtn.innerText = 'Fix It For Me (Apply to GitHub)';
+                    applyFixesBtn.disabled = false;
+                }, 2000);
+            }
+        } catch (err) {
+            applyFixesBtn.innerText = 'Failed request';
+            setTimeout(() => {
+                applyFixesBtn.innerText = 'Fix It For Me (Apply to GitHub)';
+                applyFixesBtn.disabled = false;
+            }, 2000);
+        }
+    });
+
+    closePitchModal.addEventListener('click', () => pitchModal.style.display = 'none');
+
+    copyPitchBtn.addEventListener('click', () => {
+        pitchTextarea.select();
+        document.execCommand('copy');
+        copyPitchBtn.innerText = 'Copied!';
+        setTimeout(() => copyPitchBtn.innerText = 'Copy to Clipboard', 2000);
+    });
+
+    window.draftPitch = async () => {
+        if (!currentReport) return;
+        pitchModal.style.display = 'flex';
+        pitchLoading.style.display = 'block';
+        pitchTextarea.style.display = 'none';
+        copyPitchBtn.style.display = 'none';
+
+        try {
+            const res = await fetch('/api/draft-pitch', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(currentReport)
+            });
+
+            if (!res.ok) {
+                // If it's 404, it means the server wasn't restarted
+                const errText = await res.text();
+                throw new Error(`HTTP ${res.status}: ${errText.substring(0, 50)}...`);
+            }
+
+            const data = await res.json();
+            pitchLoading.style.display = 'none';
+            if (data.error) {
+                pitchTextarea.value = 'Error generating pitch: ' + data.error;
+            } else {
+                pitchTextarea.value = data.emailText;
+                copyPitchBtn.style.display = 'block';
+            }
+            pitchTextarea.style.display = 'block';
+        } catch (err) {
+            pitchLoading.style.display = 'none';
+            pitchTextarea.value = `Failed to generate pitch. \nDetails: ${err.message}\n\nDid you restart the Node.js server after the recent backend changes?`;
+            pitchTextarea.style.display = 'block';
         }
     };
 
@@ -200,7 +347,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
 
         let saveBtnHtml = currentRole === 'recruiter'
-            ? `<button id="save-candidate-btn" class="btn" style="margin-left:auto;" onclick="saveCandidate()">Save Candidate</button>`
+            ? `<div style="margin-left:auto; display:flex; gap:10px;">
+                <button id="draft-pitch-btn" class="btn btn-outline" onclick="draftPitch()">✨ AI Draft Pitch</button>
+                <button id="save-candidate-btn" class="btn" onclick="saveCandidate()">Save Candidate</button>
+               </div>`
             : '';
 
         let reposHtml = '';
@@ -209,16 +359,29 @@ document.addEventListener('DOMContentLoaded', async () => {
             <div style="margin-top: 30px;">
                 <h4 style="color:var(--accent-peach);">Top Repositories</h4>
                 <div class="repos-grid">
-                    ${data.repositories.map(repo => `
-                        <div class="repo-card" onclick="openCommitsModal('${data.username}', '${repo.name}')">
+                    ${data.repositories.map(repo => {
+                let linksHtml = '';
+                if (repo.homepage) {
+                    linksHtml += `<a href="${repo.homepage}" target="_blank" onclick="event.stopPropagation();" class="repo-badge">🌐 Live</a> `;
+                }
+                if (repo.apkUrl) {
+                    linksHtml += `<a href="${repo.apkUrl}" target="_blank" onclick="event.stopPropagation();" class="repo-badge">📱 APK</a>`;
+                }
+                if (repo.hasReadme) {
+                    linksHtml += `<span class="repo-badge" style="background:var(--accent-peach); color:var(--bg-dark);">📖 Docs</span>`;
+                }
+
+                return `
+                        <div class="repo-card" onclick="openCommitsModal('${data.username}', '${repo.name}')" style="position:relative;">
                             <h5>${repo.name}</h5>
                             <p>${repo.description ? repo.description.substring(0, 60) + '...' : 'No description'}</p>
                             <div class="stats">
                                 <span>⭐ ${repo.stargazers_count}</span>
                                 <span>${repo.language || 'Unknown'}</span>
                             </div>
-                        </div>
-                    `).join('')}
+                            <div style="margin-top:10px;">${linksHtml}</div>
+                        </div>`;
+            }).join('')}
                 </div>
             </div>`;
         }
@@ -238,21 +401,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             <div style="display:flex; gap: 40px; margin-bottom: 20px;">
                 <div style="flex: 1;">
                     <h4 style="color:var(--accent-peach);">Algorithmic Breakdown</h4>
-                    <div class="progress-container">
-                        <div class="progress-label"><span>Impact (Stars, Forks)</span> <span>${s.impact} / 40</span></div>
-                        <div class="progress-bar"><div class="progress-fill impact" style="width: ${(s.impact / 40) * 100}%;"></div></div>
-                    </div>
-                    <div class="progress-container">
-                        <div class="progress-label"><span>Activity (Repos, Recency)</span> <span>${s.activity} / 30</span></div>
-                        <div class="progress-bar"><div class="progress-fill activity" style="width: ${(s.activity / 30) * 100}%;"></div></div>
-                    </div>
-                    <div class="progress-container">
-                        <div class="progress-label"><span>Network (Followers)</span> <span>${s.network} / 15</span></div>
-                        <div class="progress-bar"><div class="progress-fill network" style="width: ${(s.network / 15) * 100}%;"></div></div>
-                    </div>
-                    <div class="progress-container">
-                        <div class="progress-label"><span>Profile Completeness</span> <span>${s.profile} / 15</span></div>
-                        <div class="progress-bar"><div class="progress-fill profile" style="width: ${(s.profile / 15) * 100}%;"></div></div>
+                    <div style="position: relative; height:250px; width:100%; margin-bottom:20px;">
+                        <canvas id="scoreRadarChart"></canvas>
                     </div>
                 </div>
 
@@ -262,6 +412,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <div class="metric"><span>Total Stars:</span> <strong>${data.total_stars}</strong></div>
                     <div class="metric"><span>Followers:</span> <strong>${data.followers}</strong></div>
                     <div class="metric"><span>Top Languages:</span> <strong>${languagesHtml || 'None'}</strong></div>
+                    <br>
+                    <h4 style="color:var(--accent-peach);">Classic Scores</h4>
+                    <div class="progress-container"><div class="progress-label"><span>Impact</span> <span>${s.impact}/40</span></div><div class="progress-bar"><div class="progress-fill impact" style="width: ${(s.impact / 40) * 100}%;"></div></div></div>
+                    <div class="progress-container"><div class="progress-label"><span>Activity</span> <span>${s.activity}/30</span></div><div class="progress-bar"><div class="progress-fill activity" style="width: ${(s.activity / 30) * 100}%;"></div></div></div>
+                    <div class="progress-container"><div class="progress-label"><span>Network</span> <span>${s.network}/15</span></div><div class="progress-bar"><div class="progress-fill network" style="width: ${(s.network / 15) * 100}%;"></div></div></div>
+                    <div class="progress-container"><div class="progress-label"><span>Profile</span> <span>${s.profile}/15</span></div><div class="progress-bar"><div class="progress-fill profile" style="width: ${(s.profile / 15) * 100}%;"></div></div></div>
                 </div>
             </div>
             
@@ -272,5 +428,53 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <p style="margin-top: 10px; line-height: 1.6; margin-bottom: 0;">${formattedAiSummary}</p>
             </div>
         `;
+
+        // Render Radar Chart
+        const ctx = document.getElementById('scoreRadarChart').getContext('2d');
+        if (radarChartInstance) radarChartInstance.destroy();
+
+        radarChartInstance = new Chart(ctx, {
+            type: 'radar',
+            data: {
+                labels: ['Impact (40)', 'Activity (30)', 'Network (15)', 'Profile (15)'],
+                datasets: [{
+                    label: 'Score Shape',
+                    data: [
+                        (s.impact / 40) * 100,
+                        (s.activity / 30) * 100,
+                        (s.network / 15) * 100,
+                        (s.profile / 15) * 100
+                    ],
+                    backgroundColor: 'rgba(255, 205, 130, 0.4)', // Peach transparent
+                    borderColor: '#FFCD82',
+                    pointBackgroundColor: '#ADDBFF',
+                    pointBorderColor: '#fff',
+                    pointHoverBackgroundColor: '#fff',
+                    pointHoverBorderColor: '#ADDBFF'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    r: {
+                        angleLines: { color: 'rgba(255,255,255,0.1)' },
+                        grid: { color: 'rgba(255,255,255,0.1)' },
+                        pointLabels: { color: '#ADDBFF', font: { size: 12 } },
+                        ticks: { display: false, min: 0, max: 100 }
+                    }
+                },
+                plugins: {
+                    legend: { display: false }
+                }
+            }
+        });
+
+        // Handle aspirant-specific view visibility
+        if (currentRole === 'aspirant') {
+            aspirantActions.style.display = 'block';
+        } else {
+            aspirantActions.style.display = 'none';
+        }
     }
 });
