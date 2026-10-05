@@ -94,23 +94,54 @@ document.addEventListener('DOMContentLoaded', async () => {
                 return;
             }
 
-            favoritesList.innerHTML = data.map(candidate => `
-                <div class="saved-item">
-                    <div style="display:flex; align-items:center;">
-                        <img src="${candidate.avatar_url}" alt="${candidate.candidate_username}">
-                        <div class="saved-item-info">
-                            <strong>${candidate.candidate_name || candidate.candidate_username}</strong>
-                            <div>@${candidate.candidate_username}</div>
+            // Group by drive_name
+            const grouped = {};
+            data.forEach(candidate => {
+                const drive = candidate.drive_name || 'General';
+                if (!grouped[drive]) grouped[drive] = [];
+                grouped[drive].push(candidate);
+            });
+
+            let html = '';
+            for (const [drive, candidates] of Object.entries(grouped)) {
+                html += `<h4 style="margin-top: 20px; color: var(--accent-peach); border-bottom: 1px solid var(--border-brown); padding-bottom: 5px;">Drive: ${drive}</h4>`;
+                html += candidates.map(c => `
+                    <div class="saved-item">
+                        <div style="display:flex; align-items:center;">
+                            <img src="${c.avatar_url}" style="width:40px; height:40px; border-radius:50%; margin-right:10px;" alt="${c.candidate_username}">
+                            <div class="saved-item-info" style="margin-left: 0;">
+                                <strong>${c.candidate_name || c.candidate_username}</strong>
+                                <div>@${c.candidate_username}</div>
+                            </div>
+                        </div>
+                        <strong>Score: ${c.score}</strong>
+                        <div style="display:flex; gap: 10px;">
+                            <button class="btn btn-outline" style="padding: 5px 10px;" onclick="loadCandidate('${c.candidate_username}')">View</button>
+                            <button class="btn" style="padding: 5px 10px; background: #c62828; color: white;" onclick="deleteCandidate('${c.candidate_username}')">🗑️</button>
                         </div>
                     </div>
-                    <strong>Score: ${candidate.score}</strong>
-                    <button class="btn btn-outline" onclick="loadCandidate('${candidate.candidate_username}')">View</button>
-                </div>
-            `).join('');
+                `).join('');
+            }
+            favoritesList.innerHTML = html;
         } catch (err) {
             favoritesList.innerHTML = `<p style="color:red">Error loading favorites.</p>`;
         }
     });
+
+    window.deleteCandidate = async (username) => {
+        if (!confirm(`Are you sure you want to remove ${username} from your saved candidates?`)) return;
+        try {
+            const res = await fetch(`/api/favorites/${username}`, { method: 'DELETE' });
+            const data = await res.json();
+            if (data.success) {
+                document.getElementById('view-favorites-btn').click(); // Refresh list
+            } else {
+                alert("Failed to delete candidate.");
+            }
+        } catch (err) {
+            alert("Error deleting candidate.");
+        }
+    };
 
     window.loadCandidate = (username) => {
         candidateInput.value = username;
@@ -306,6 +337,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     window.saveCandidate = async () => {
         if (!currentReport) return;
         const btn = document.getElementById('save-candidate-btn');
+
+        const driveName = prompt("Enter Recruitment Drive (leave blank for General):");
+        if (driveName === null) return; // Cancelled
+
         btn.disabled = true;
         btn.innerText = 'Saving...';
 
@@ -317,7 +352,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                     username: currentReport.username,
                     score: currentReport.scores.total,
                     avatar_url: currentReport.avatar_url,
-                    name: currentReport.name
+                    name: currentReport.name,
+                    drive_name: driveName
                 })
             });
             const result = await res.json();

@@ -70,22 +70,19 @@ router.get('/analyze/:username', async (req, res) => {
         // Simulated AI Summary if no API key
         let aiSummary = `${userData.name || username} has a total developer score of ${score}/100 based on their GitHub footprint.\nImpact score: ${s_impact}/40\nActivity score: ${s_activity}/30\nNetwork score: ${s_network}/15\nProfile score: ${s_profile}/15`;
 
-        if (process.env.OPENAI_API_KEY) {
+        if (process.env.GEMINI_API_KEY) {
             try {
                 const prompt = `You are a professional assistant helping evaluate developers' GitHub portfolios.
 The developer ${userData.name || username} has a score of ${score}/100.
 Breakdown: Impact ${s_impact}/40, Activity ${s_activity}/30, Network ${s_network}/15, Profile Completeness ${s_profile}/15.
 Identify their strengths and give 2 clear, actionable recommendations on how to improve their lower sub-scores based strictly on this breakdown. Format as 1 short paragraph summary, followed by 2 bullet points for recommendations.`;
 
-                const openaiResp = await axios.post('https://api.openai.com/v1/chat/completions', {
-                    model: "gpt-3.5-turbo",
-                    messages: [{ "role": "user", "content": prompt }]
-                }, {
-                    headers: { 'Authorization': `Bearer ${process.env.OPENAI_API_KEY}` }
+                const geminiResp = await axios.post(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key=${process.env.GEMINI_API_KEY}`, {
+                    contents: [{ parts: [{ text: prompt }] }]
                 });
-                aiSummary = openaiResp.data.choices[0].message.content;
+                aiSummary = geminiResp.data.candidates[0].content.parts[0].text;
             } catch (aiErr) {
-                console.error("OpenAI Error:", aiErr.message);
+                console.error("Gemini Error:", aiErr.response?.data || aiErr.message);
             }
         }
 
@@ -146,17 +143,36 @@ Identify their strengths and give 2 clear, actionable recommendations on how to 
 router.post('/favorites', async (req, res) => {
     if (!supabase) return res.status(500).json({ error: "Supabase not configured." });
 
-    const { username, score, avatar_url, name } = req.body;
+    const { username, score, avatar_url, name, drive_name } = req.body;
+    const drive = drive_name || 'General';
 
     try {
         const { data, error } = await supabase
             .from('favorites')
-            .insert([{ candidate_username: username, score, avatar_url, candidate_name: name }]);
+            .insert([{ candidate_username: username, score, avatar_url, candidate_name: name, drive_name: drive }]);
 
         if (error) throw error;
         res.json({ success: true, data });
     } catch (err) {
         console.error("Supabase insert error", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Delete a favorite candidate
+router.delete('/favorites/:username', async (req, res) => {
+    if (!supabase) return res.status(500).json({ error: "Supabase not configured." });
+
+    try {
+        const { error } = await supabase
+            .from('favorites')
+            .delete()
+            .eq('candidate_username', req.params.username);
+
+        if (error) throw error;
+        res.json({ success: true });
+    } catch (err) {
+        console.error("Supabase delete error", err);
         res.status(500).json({ error: err.message });
     }
 });
@@ -202,8 +218,8 @@ router.get('/commits/:username/:repo', async (req, res) => {
 
 // Suggest profile fixes
 router.get('/suggest-fixes', async (req, res) => {
-    if (!req.isAuthenticated() || !process.env.OPENAI_API_KEY) {
-        return res.status(401).json({ error: "Unauthorized or missing OpenAI key" });
+    if (!req.isAuthenticated() || !process.env.GEMINI_API_KEY) {
+        return res.status(401).json({ error: "Unauthorized or missing Gemini API key" });
     }
     try {
         const userResp = await axios.get('https://api.github.com/user', {
@@ -221,11 +237,10 @@ router.get('/suggest-fixes', async (req, res) => {
         let suggestions = {};
         if (!profile.bio) {
             const prompt = `Write a short, professional GitHub bio (max 160 characters) for a software developer specializing in ${Array.from(languages).join(', ')}. Return ONLY the bio text without quotes.`;
-            const openaiResp = await axios.post('https://api.openai.com/v1/chat/completions', {
-                model: "gpt-3.5-turbo",
-                messages: [{ "role": "user", "content": prompt }]
-            }, { headers: { 'Authorization': `Bearer ${process.env.OPENAI_API_KEY}` } });
-            suggestions.bio = openaiResp.data.choices[0].message.content.replace(/["']/g, '');
+            const geminiResp = await axios.post(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key=${process.env.GEMINI_API_KEY}`, {
+                contents: [{ parts: [{ text: prompt }] }]
+            });
+            suggestions.bio = geminiResp.data.candidates[0].content.parts[0].text.replace(/["']/g, '');
         }
         if (!profile.location) {
             suggestions.location = "Earth";
@@ -261,8 +276,8 @@ router.post('/apply-fixes', async (req, res) => {
 
 // Draft pitch for recruiter
 router.post('/draft-pitch', async (req, res) => {
-    if (!process.env.OPENAI_API_KEY) {
-        return res.status(500).json({ error: "OpenAI API key missing." });
+    if (!process.env.GEMINI_API_KEY) {
+        return res.status(500).json({ error: "Gemini API key missing." });
     }
     try {
         const candidate = req.body;
@@ -272,12 +287,11 @@ router.post('/draft-pitch', async (req, res) => {
 Mention their top skills: ${topLanguages}, and subtly compliment their objective developer algorithm score of ${candidate.scores.total}/100. 
 Make the pitch engaging for a SaaS company. Do not use generic subject lines. Provide the raw text for the email, use [insert company] tokens for things the recruiter usually fills.`;
 
-        const openaiResp = await axios.post('https://api.openai.com/v1/chat/completions', {
-            model: "gpt-3.5-turbo",
-            messages: [{ role: "user", content: prompt }]
-        }, { headers: { 'Authorization': `Bearer ${process.env.OPENAI_API_KEY}` } });
+        const geminiResp = await axios.post(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key=${process.env.GEMINI_API_KEY}`, {
+            contents: [{ parts: [{ text: prompt }] }]
+        });
 
-        res.json({ emailText: openaiResp.data.choices[0].message.content });
+        res.json({ emailText: geminiResp.data.candidates[0].content.parts[0].text });
     } catch (err) {
         console.error(err.response?.data || err.message);
         res.status(500).json({ error: "Failed to generate AI pitch draft." });
