@@ -8,7 +8,9 @@ dotenv.config();
 
 let callbackURL = "http://localhost:3000/auth/github/callback";
 if (process.env.NODE_ENV === 'production') {
-    callbackURL = process.env.BASE_URL + "/auth/github/callback";
+    // Fallback to the Vercel app URL if BASE_URL is not set in Vercel environment variables
+    const baseUrl = process.env.BASE_URL || "https://github-portfolio-intellignece.vercel.app";
+    callbackURL = baseUrl + "/auth/github/callback";
 }
 
 passport.serializeUser((user, done) => {
