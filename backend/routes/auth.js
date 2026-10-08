@@ -55,7 +55,7 @@ router.get('/check', (req, res) => {
     }
 });
 
-router.get('/logout', (req, res) => {
+router.get('/logout', (req, res, next) => {
     req.logout((err) => {
         if (err) { return next(err); }
         res.redirect('/');

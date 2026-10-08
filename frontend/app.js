@@ -61,13 +61,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.error('Error checking auth', err);
     }
 
-    // Save role on selection change
-    const roleRadios = document.querySelectorAll('input[name="role"]');
-    roleRadios.forEach(radio => {
-        radio.addEventListener('change', (e) => {
-            localStorage.setItem('role', e.target.value);
+    // Save role when login button is clicked
+    const loginLink = document.querySelector('a[href="/auth/github"]');
+    if (loginLink) {
+        loginLink.addEventListener('click', () => {
+            const selected = document.querySelector('input[name="role"]:checked');
+            if (selected) {
+                localStorage.setItem('role', selected.value);
+            }
         });
-    });
+    }
 
     // Search button click
     searchBtn.addEventListener('click', () => {
