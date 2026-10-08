@@ -61,14 +61,65 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.error('Error checking auth', err);
     }
 
-    // Save role when login button is clicked
+    // Button elements
     const loginLink = document.querySelector('a[href="/auth/github"]');
+    const recruiterBypassBtn = document.getElementById('recruiter-bypass-btn');
+    const roleRadios = document.querySelectorAll('input[name="role"]');
+    const backHomeBtn = document.getElementById('back-home-btn');
+    const logoutBtn = document.getElementById('logout-btn');
+
     if (loginLink) {
         loginLink.addEventListener('click', () => {
             const selected = document.querySelector('input[name="role"]:checked');
-            if (selected) {
-                localStorage.setItem('role', selected.value);
+            if (selected) localStorage.setItem('role', selected.value);
+        });
+    }
+
+    roleRadios.forEach(radio => {
+        radio.addEventListener('change', (e) => {
+            if (e.target.value === 'recruiter' && recruiterBypassBtn) {
+                recruiterBypassBtn.style.display = 'block';
+                loginLink.style.display = 'none'; // Only allow bypass or login? User might want to login as recruiter too, so we keep both!
+                loginLink.style.display = 'inline-block';
+            } else if (recruiterBypassBtn) {
+                recruiterBypassBtn.style.display = 'none';
+                loginLink.style.display = 'inline-block';
             }
+        });
+    });
+
+    // Check if initial load requires button show
+    const checkedRadio = document.querySelector('input[name="role"]:checked');
+    if (checkedRadio && checkedRadio.value === 'recruiter' && recruiterBypassBtn) {
+        recruiterBypassBtn.style.display = 'block';
+    }
+
+    if (recruiterBypassBtn) {
+        recruiterBypassBtn.addEventListener('click', () => {
+            localStorage.setItem('role', 'recruiter');
+            currentRole = 'recruiter';
+            loginSection.style.display = 'none';
+            dashboardSection.style.display = 'block';
+            searchSection.style.display = 'block';
+            viewFavoritesBtn.style.display = 'inline-block';
+            if (document.getElementById('aspirant-actions')) {
+                document.getElementById('aspirant-actions').style.display = 'none';
+            }
+        });
+    }
+
+    if (backHomeBtn) {
+        backHomeBtn.addEventListener('click', () => {
+            dashboardSection.style.display = 'none';
+            loginSection.style.display = 'block';
+            resultsBox.style.display = 'none';
+            favoritesSection.style.display = 'none';
+        });
+    }
+
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', () => {
+            localStorage.clear();
         });
     }
 
