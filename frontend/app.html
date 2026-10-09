@@ -63,8 +63,8 @@
                 <button id="improve-profile-btn" class="btn" style="padding:12px 24px; font-size:16px;">Improve My
                     Profile (AI)</button>
                 <button id="cluster-repos-btn" class="btn"
-                    style="padding:12px 24px; font-size:16px; margin-left:12px; background: linear-gradient(135deg, #7c3aed, #2563eb);">&#x2728;
-                    Cluster My Repos</button>
+                    style="padding:12px 24px; font-size:16px; margin-left:12px; background: linear-gradient(135deg, #7c3aed, #2563eb);">Cluster
+                    Repos</button>
             </div>
 
             <div id="cluster-results" class="card" style="display:none; margin-top:20px; text-align:left;">
@@ -162,7 +162,7 @@
                 } catch (err) {
                     alert('Clustering failed: ' + err.message);
                 } finally {
-                    clusterBtn.textContent = '✨ Cluster My Repos';
+                    clusterBtn.textContent = 'Cluster Repos';
                     clusterBtn.disabled = false;
                 }
             });

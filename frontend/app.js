@@ -439,6 +439,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         let saveBtnHtml = currentRole === 'recruiter'
             ? `<div style="margin-left:auto; display:flex; gap:10px;">
+                <button class="btn" style="background: linear-gradient(135deg, #7c3aed, #2563eb); border: none; color: white;" onclick="document.getElementById('cluster-repos-btn').click()">Cluster Repos</button>
                 <button id="draft-pitch-btn" class="btn btn-outline" onclick="draftPitch()">✨ AI Draft Pitch</button>
                 <button id="save-candidate-btn" class="btn" onclick="saveCandidate()">Save Candidate</button>
                </div>`

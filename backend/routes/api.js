@@ -220,8 +220,8 @@ router.get('/commits/:username/:repo', async (req, res) => {
 
 // Suggest profile fixes
 router.get('/suggest-fixes', async (req, res) => {
-    if (!req.isAuthenticated() || !process.env.GEMINI_API_KEY) {
-        return res.status(401).json({ error: "Unauthorized or missing Gemini API key" });
+    if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Unauthorized" });
     }
     try {
         const userResp = await axios.get('https://api.github.com/user', {
@@ -235,14 +235,26 @@ router.get('/suggest-fixes', async (req, res) => {
         });
         let languages = new Set();
         reposResp.data.forEach(r => { if (r.language) languages.add(r.language); });
+        const langList = Array.from(languages).join(', ') || 'various technologies';
 
         let suggestions = {};
         if (!profile.bio) {
-            const prompt = `Write a short, professional GitHub bio (max 160 characters) for a software developer specializing in ${Array.from(languages).join(', ')}. Return ONLY the bio text without quotes.`;
-            const geminiResp = await axios.post(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key=${process.env.GEMINI_API_KEY}`, {
-                contents: [{ parts: [{ text: prompt }] }]
-            });
-            suggestions.bio = geminiResp.data.candidates[0].content.parts[0].text.replace(/["']/g, '');
+            if (process.env.GEMINI_API_KEY) {
+                try {
+                    const prompt = `Write a short, professional GitHub bio (max 160 characters) for a software developer specializing in ${langList}. Return ONLY the bio text without quotes.`;
+                    const geminiResp = await axios.post(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key=${process.env.GEMINI_API_KEY}`, {
+                        contents: [{ parts: [{ text: prompt }] }]
+                    });
+                    suggestions.bio = geminiResp.data.candidates[0].content.parts[0].text.replace(/[\"']/g, '');
+                } catch (aiErr) {
+                    console.error("Gemini Error:", aiErr.response?.data || aiErr.message);
+                    // Fallback to template bio
+                    suggestions.bio = `Software developer specializing in ${langList}. Building great things on GitHub.`;
+                }
+            } else {
+                // No Gemini key — use a template bio
+                suggestions.bio = `Software developer specializing in ${langList}. Building great things on GitHub.`;
+            }
         }
         if (!profile.location) {
             suggestions.location = "Earth";
