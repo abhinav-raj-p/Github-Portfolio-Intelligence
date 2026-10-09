@@ -18,12 +18,23 @@ app.use(express.static(path.join(__dirname, '../frontend')));
 // --- Persistent Session Store (required for Vercel serverless) ---
 let sessionStore;
 if (process.env.DATABASE_URL) {
-    const pgSession = require('connect-pg-simple')(session);
-    sessionStore = new pgSession({
-        conString: process.env.DATABASE_URL,
-        tableName: 'user_sessions',
-        createTableIfMissing: true // auto-creates the sessions table
-    });
+    try {
+        const { Pool } = require('pg');
+        const pool = new Pool({
+            connectionString: process.env.DATABASE_URL,
+            ssl: { rejectUnauthorized: false }
+        });
+
+        const pgSession = require('connect-pg-simple')(session);
+        sessionStore = new pgSession({
+            pool: pool,
+            tableName: 'user_sessions',
+            createTableIfMissing: true
+        });
+        console.log('Using Postgres session store with SSL.');
+    } catch (e) {
+        console.error('Failed to init Postgres session store, falling back to memory:', e.message);
+    }
 }
 
 // Session for Passport

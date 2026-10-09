@@ -37,8 +37,12 @@ if (process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET) {
     console.warn("GITHUB_CLIENT_ID or GITHUB_CLIENT_SECRET not set. GitHub auth will fail.");
 }
 
-router.get('/github',
-    passport.authenticate('github', { scope: ['user'] }));
+router.get('/github', (req, res, next) => {
+    if (!process.env.GITHUB_CLIENT_ID || !process.env.GITHUB_CLIENT_SECRET) {
+        return res.status(500).send("Server Error: Missing GITHUB_CLIENT_ID or GITHUB_CLIENT_SECRET in Vercel Environment Variables. Please add them in Vercel > Settings > Environment Variables, then redeploy.");
+    }
+    next();
+}, passport.authenticate('github', { scope: ['user'] }));
 
 router.get('/github/callback',
     passport.authenticate('github', { failureRedirect: '/' }),
