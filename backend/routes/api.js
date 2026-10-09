@@ -2,6 +2,9 @@ const express = require('express');
 const axios = require('axios');
 const router = express.Router();
 const { supabase } = require('../services/supabase');
+const { scoreDeveloper } = require('../utils/scoring');
+const { preprocessData, calculateTfIdf } = require('../../algorithms/repo-clustering/nlp');
+const { kMeansClustering } = require('../../algorithms/repo-clustering/kmeans');
 
 // Configure API endpoint to analyze a GitHub user
 router.get('/analyze/:username', async (req, res) => {
@@ -36,36 +39,28 @@ router.get('/analyze/:username', async (req, res) => {
             }
         }
 
-        // --- Algorithmic Scoring ---
-        // S_impact (Max 40)
-        let s_impact = Math.min(40, (totalStars * 1) + (totalForks * 2));
-
-        // S_activity (Max 30)
         let publicReposCount = userData.public_repos || reposData.length;
-        let s_activity = Math.min(30, (publicReposCount * 0.5) + (recentReposCount * 2));
-
-        // S_network (Max 15)
         let followers = userData.followers || 0;
-        let s_network = Math.min(15, followers * 1.5);
 
-        // S_profile (Max 15)
-        let s_profile = 0;
-        if (userData.bio) s_profile += 3;
-        if (userData.location) s_profile += 3;
-        if (userData.blog) s_profile += 3;
-        if (userData.company) s_profile += 3;
-        if (userData.email) s_profile += 3;
+        // --- Advanced Algorithmic Scoring ---
+        const scoreBreakdown = scoreDeveloper({
+            totalStars,
+            totalForks,
+            recentReposCount,
+            publicReposCount,
+            followers,
+            bio: userData.bio,
+            location: userData.location,
+            blog: userData.blog,
+            company: userData.company,
+            email: userData.email
+        });
 
-        // Total score calculation
-        let score = Math.floor(s_impact + s_activity + s_network + s_profile);
-
-        const scoreBreakdown = {
-            impact: s_impact,
-            activity: s_activity,
-            network: s_network,
-            profile: s_profile,
-            total: score
-        };
+        let score = scoreBreakdown.total;
+        let s_impact = scoreBreakdown.impact;
+        let s_activity = scoreBreakdown.activity;
+        let s_network = scoreBreakdown.network;
+        let s_profile = scoreBreakdown.profile;
 
         // Simulated AI Summary if no API key
         let aiSummary = `${userData.name || username} has a total developer score of ${score}/100 based on their GitHub footprint.\nImpact score: ${s_impact}/40\nActivity score: ${s_activity}/30\nNetwork score: ${s_network}/15\nProfile score: ${s_profile}/15`;
@@ -129,7 +124,14 @@ Identify their strengths and give 2 clear, actionable recommendations on how to 
             top_languages: languageCounts,
             scores: scoreBreakdown,
             aiSummary: aiSummary,
-            repositories: enrichedRepos
+            repositories: enrichedRepos,
+            // All repos (lightweight) for clustering
+            all_repositories: reposData.map(r => ({
+                name: r.name,
+                description: r.description || '',
+                topics: r.topics || [],
+                language: r.language || null
+            }))
         };
 
         res.json(report);
@@ -295,6 +297,45 @@ Make the pitch engaging for a SaaS company. Do not use generic subject lines. Pr
     } catch (err) {
         console.error(err.response?.data || err.message);
         res.status(500).json({ error: "Failed to generate AI pitch draft." });
+    }
+});
+
+// Cluster a user's repositories using TF-IDF + K-Means
+router.post('/cluster', (req, res) => {
+    try {
+        const repos = req.body.repos; // [{ name, description, topics, language }]
+
+        if (!repos || repos.length < 2) {
+            return res.status(400).json({ error: 'Need at least 2 repositories to cluster.' });
+        }
+
+        // Decide k: use 3 clusters or fewer if there aren't many repos
+        const k = Math.min(3, repos.length);
+
+        // NLP → TF-IDF → K-Means
+        const tokenized = preprocessData(repos);
+        const { vectors } = calculateTfIdf(tokenized);
+        const clusterIndices = kMeansClustering(vectors, k); // array of k arrays of repo-indices
+
+        // Build labelled cluster objects
+        const clusters = clusterIndices.map((indices, i) => {
+            const members = indices.map(idx => repos[idx]);
+
+            // Pick a label based on most-common language in the cluster
+            const langCount = {};
+            members.forEach(r => {
+                if (r.language) langCount[r.language] = (langCount[r.language] || 0) + 1;
+            });
+            const topLang = Object.entries(langCount).sort((a, b) => b[1] - a[1])[0];
+            const label = topLang ? `${topLang[0]} Projects` : `Cluster ${i + 1}`;
+
+            return { label, repos: members };
+        }).filter(c => c.repos.length > 0); // drop any empty clusters
+
+        res.json({ clusters });
+    } catch (err) {
+        console.error('Clustering error:', err.message);
+        res.status(500).json({ error: 'Clustering failed.' });
     }
 });
 

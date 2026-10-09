@@ -382,6 +382,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             currentReport = data;
+            window.lastReport = data; // expose for cluster feature
             renderResults(data);
         } catch (err) {
             resultsBox.innerHTML = `<p style="color:red">Error fetching data.</p>`;

@@ -44,7 +44,7 @@ router.get('/github/callback',
     passport.authenticate('github', { failureRedirect: '/' }),
     function (req, res) {
         // Successful authentication, redirect to dashboard.
-        res.redirect('/');
+        res.redirect('/app.html');
     });
 
 router.get('/check', (req, res) => {
