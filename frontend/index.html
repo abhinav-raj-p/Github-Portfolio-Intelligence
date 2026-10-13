@@ -193,6 +193,34 @@
             transform: scale(0.97);
         }
 
+        /* ─── Loading Circle Animation ─── */
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .btn-spinner {
+            display: inline-block;
+            width: 18px;
+            height: 18px;
+            border: 2.5px solid rgba(68, 44, 0, 0.25);
+            border-top-color: #442c00;
+            border-radius: 50%;
+            animation: spin 0.75s linear infinite;
+            flex-shrink: 0;
+            vertical-align: middle;
+        }
+
+        .btn-peach.loading {
+            pointer-events: none;
+            opacity: 0.95;
+            cursor: wait;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            gap: 10px !important;
+        }
+
         /* ─── Scroll reveal ─── */
         .reveal {
             opacity: 0;
@@ -807,21 +835,41 @@
         }, { threshold: 0.1 });
         document.querySelectorAll('.reveal').forEach(el => obs.observe(el));
 
-        // Aspirant action - set default role preference to aspirant
-        function goAspirant() {
+        // Aspirant action - show loading circle animation & text, set default role preference
+        function goAspirant(e) {
+            e.preventDefault();
             localStorage.setItem('role', 'aspirant');
             sessionStorage.setItem('gitview_role', 'aspirant');
+
+            const btn = e.currentTarget;
+            if (btn && !btn.classList.contains('loading')) {
+                btn.classList.add('loading');
+                btn.innerHTML = `
+                    <span class="btn-spinner"></span>
+                    <span>Analyzing profile, it may take some time...</span>
+                `;
+            }
+            window.location.href = '/auth/github';
         }
 
         document.querySelectorAll('a[href="/auth/github"]').forEach(link => {
             link.addEventListener('click', goAspirant);
         });
 
-        // Recruiter action - set default role preference to recruiter and navigate directly to app.html
+        // Recruiter action - show loading spinner, set default role preference and navigate directly to app.html
         function goRecruiter(e) {
             e.preventDefault();
             localStorage.setItem('role', 'recruiter');
             sessionStorage.setItem('gitview_role', 'recruiter');
+
+            const btn = e.currentTarget;
+            if (btn && !btn.classList.contains('loading')) {
+                btn.classList.add('loading');
+                const enterBadge = btn.querySelector('.text-secondary');
+                if (enterBadge) {
+                    enterBadge.innerHTML = `<span class="btn-spinner" style="width:13px; height:13px; border-color:rgba(123,208,255,0.3); border-top-color:#7bd0ff; margin-right:4px;"></span> Loading...`;
+                }
+            }
             window.location.href = '/app.html';
         }
 

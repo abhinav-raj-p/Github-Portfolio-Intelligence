@@ -62,6 +62,28 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     window.hideClusterResults = hideClusterResults;
 
+    // Helper: set button loading state with spinner circle animation
+    function setBtnLoading(btn, isLoading, fallbackText, loadingText = 'Analyzing profile, it may take some time...') {
+        if (!btn) return;
+        if (isLoading) {
+            btn.disabled = true;
+            btn.classList.add('loading');
+            if (!btn.dataset.originalHtml) {
+                btn.dataset.originalHtml = btn.innerHTML;
+            }
+            btn.innerHTML = `<span class="spinner"></span> <span>${loadingText}</span>`;
+        } else {
+            btn.disabled = false;
+            btn.classList.remove('loading');
+            if (btn.dataset.originalHtml) {
+                btn.innerHTML = btn.dataset.originalHtml;
+                delete btn.dataset.originalHtml;
+            } else if (fallbackText) {
+                btn.innerHTML = fallbackText;
+            }
+        }
+    }
+
     // Enter a specific role in the dashboard
     function enterDashboard(role) {
         currentRole = role;
@@ -132,6 +154,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         continueSignedInBtn.addEventListener('click', () => {
             const checked = document.querySelector('input[name="role"]:checked');
             const chosen = checked ? checked.value : 'aspirant';
+            if (chosen === 'aspirant') {
+                setBtnLoading(continueSignedInBtn, true, continueSignedInBtn.textContent);
+            }
             enterDashboard(chosen);
         });
     }
@@ -143,13 +168,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // Login link click
+    // Login link click - show loading spinner in case of network delay
     if (loginLink) {
         loginLink.addEventListener('click', () => {
             const checked = document.querySelector('input[name="role"]:checked');
             const chosen = checked ? checked.value : 'aspirant';
             localStorage.setItem('role', chosen);
             sessionStorage.setItem('gitview_role', chosen);
+
+            setBtnLoading(loginLink, true, 'Login with GitHub');
         });
     }
 
@@ -483,7 +510,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         hideClusterResults(); // CRITICAL: hide previous K-Means output when analyzing profile
         resultsBox.style.display = 'block';
         favoritesSection.style.display = 'none';
-        resultsBox.innerHTML = '<p style="color:var(--accent-peach);">Analyzing profile... This may take a few seconds.</p>';
+        
+        // Animated loading circle + required message
+        resultsBox.innerHTML = `
+            <div class="analyzing-box">
+                <div class="spinner-lg"></div>
+                <div class="analyzing-text">Analyzing profile, it may take some time...</div>
+                <div class="analyzing-sub">Fetching repositories, commit activity &amp; computing engineering metrics...</div>
+            </div>
+        `;
+
+        if (searchBtn) setBtnLoading(searchBtn, true, 'Analyze Candidate');
+        if (directBtn) setBtnLoading(directBtn, true, 'Analyze');
 
         try {
             const res = await fetch(`/api/analyze/${username}`);
@@ -499,6 +537,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             renderResults(data);
         } catch (err) {
             resultsBox.innerHTML = `<p style="color:#f87171">Error fetching data.</p>`;
+        } finally {
+            if (searchBtn) setBtnLoading(searchBtn, false, 'Analyze Candidate');
+            if (directBtn) setBtnLoading(directBtn, false, 'Analyze');
+            if (continueSignedInBtn) setBtnLoading(continueSignedInBtn, false);
         }
     }
 
