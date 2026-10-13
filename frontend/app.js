@@ -167,10 +167,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Top-left corner HomePage button - navigate to landing page
     if (topHomepageBtn) {
         topHomepageBtn.addEventListener('click', (e) => {
-            if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-                e.preventDefault();
-                window.location.href = '/';
-            }
+            // Navigate directly to landing page link
+            window.location.href = 'https://gitview-sooty.vercel.app';
         });
     }
 
