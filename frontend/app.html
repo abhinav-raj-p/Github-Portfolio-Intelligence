@@ -1,313 +1,150 @@
 <!DOCTYPE html>
-<html class="dark" lang="en">
+<html lang="en">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GitView — GitHub Portfolio Intelligence</title>
-    <meta name="description"
-        content="Analyse public GitHub profiles, categorise repositories with K-Means, and calculate engineering scores for recruiters and developers." />
-
-    <!-- Fonts (Exact match to Landing Page) -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <title>GitHub Portfolio Intelligence</title>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@600;700;800;900&display=swap"
-        rel="stylesheet" />
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
-        rel="stylesheet" />
-
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-    <script>
-        tailwind.config = {
-            darkMode: "class",
-            theme: {
-                extend: {
-                    colors: {
-                        "surface-container-high": "#222a3d",
-                        "surface-container-highest": "#2d3449",
-                        "on-primary": "#442c00",
-                        "primary-container": "#ffcd82",
-                        "primary-fixed-dim": "#efbe75",
-                        "tertiary-fixed-dim": "#fcb973",
-                        "on-primary-container": "#795515",
-                        "surface": "#0b1326",
-                        "on-surface": "#dae2fd",
-                        "surface-variant": "#2d3449",
-                        "on-secondary-fixed": "#001e2c",
-                        "secondary-container": "#00a6e0",
-                        "surface-bright": "#31394d",
-                        "surface-dim": "#0b1326",
-                        "background": "#0b1326",
-                        "surface-tint": "#efbe75",
-                        "surface-container-low": "#131b2e",
-                        "surface-container": "#171f33",
-                        "surface-container-lowest": "#060e20",
-                        "on-secondary-container": "#00374d",
-                        "secondary": "#7bd0ff",
-                        "outline": "#9b8f80",
-                        "outline-variant": "#4f4539",
-                        "on-surface-variant": "#d3c4b4",
-                        "primary": "#ffefdd",
-                        "on-primary-fixed": "#281800",
-                        "inverse-primary": "#7c5818",
-                    }
-                }
-            }
-        }
-    </script>
-
-    <!-- Custom Style Sheet -->
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;600&family=Plus+Jakarta+Sans:wght@700;800&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 
 <body>
-    <!-- Atmospheric glows (Exact match to Landing Page) -->
+    <!-- Subtle dark atmosphere matching landing page -->
     <div class="glow glow-top"></div>
     <div class="glow glow-left"></div>
-    <div class="glow glow-right"></div>
     <div class="grid-bg"></div>
 
-    <!-- ═══════════════ NAVBAR ═══════════════ -->
-    <nav class="navbar" id="navbar">
-        <a href="/" class="flex items-center gap-2.5 text-inherit no-underline">
-            <div
-                class="w-8 h-8 rounded-lg bg-surface-container-high border border-outline-variant/40 flex items-center justify-center text-primary-container">
-                <span class="material-symbols-outlined" style="font-size:17px;">data_object</span>
-            </div>
-            <span
-                style="font-family:'Plus Jakarta Sans',sans-serif; font-weight:800; font-size:1.1rem; color:#ffefdd; letter-spacing:-0.02em;">GitView</span>
-        </a>
-
-        <!-- Center Role Switcher Pills -->
-        <div class="role-pills-container">
-            <button id="role-aspirant-btn" class="role-pill active" title="Switch to Developer Profile Mode">
-                <span class="material-symbols-outlined" style="font-size:15px;">terminal</span>
-                <span>Engineer</span>
-            </button>
-            <button id="role-recruiter-btn" class="role-pill" title="Switch to Recruiter Portal Mode">
-                <span class="material-symbols-outlined" style="font-size:15px;">badge</span>
-                <span>Recruiter</span>
-            </button>
-        </div>
-
-        <div class="flex items-center gap-2.5">
-            <button id="view-favorites-btn" class="btn btn-cyan"
-                style="display:none; padding:7px 14px; font-size:12px;">
-                <span class="material-symbols-outlined" style="font-size:14px;">bookmark</span>
-                Saved Candidates
-            </button>
-            <a href="/" id="back-home-btn" class="btn btn-outline"
-                style="padding:7px 14px; font-size:12px;">
-                <span class="material-symbols-outlined" style="font-size:14px;">home</span>
-                Home
-            </a>
-            <a href="/auth/logout" class="btn btn-outline" id="logout-btn"
-                style="display:none; padding:7px 14px; font-size:12px;">
-                <span class="material-symbols-outlined" style="font-size:14px;">logout</span>
-                Logout
-            </a>
-        </div>
-    </nav>
-
-    <!-- ═══════════════ MAIN CONTENT ═══════════════ -->
     <div class="container">
+        <header>
+            <h1><a href="/">GitHub Portfolio Intelligence</a></h1>
+            <p>Analyze your GitHub profile or search for candidates.</p>
+        </header>
 
-        <!-- LOGIN / ROLE SELECTION VIEW -->
-        <div id="login-section" class="card glass" style="max-width:540px; margin:40px auto;">
-            <div class="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-surface-container border border-outline-variant/30 mb-4">
-                <span class="material-symbols-outlined text-primary-container" style="font-size:13px;">account_tree</span>
-                <span class="mono" style="font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:#d3c4b4;">
-                    Get Started
-                </span>
+        <!-- Role Selection / Entry Card (Box Model) -->
+        <div id="login-section" class="card">
+            <h2>Select Role &amp; Enter</h2>
+
+            <!-- User status banner when signed in -->
+            <div id="user-status-bar" style="display:none; margin-bottom:16px; padding:10px 14px; background:var(--bg-dark); border-radius:6px; border:1px solid var(--border-brown); font-size:13px; color:var(--text-light-blue);">
+                Signed in as <strong id="logged-in-username" style="color:var(--accent-peach);"></strong>
+                <span style="margin: 0 8px; color:var(--border-brown);">|</span>
+                <a href="/auth/logout" style="color:var(--accent-peach); text-decoration:none; font-weight:600;">Logout</a>
             </div>
-
-            <h2 style="font-size:1.6rem; color:#ffefdd; margin-bottom:8px;">Select Role &amp; Enter</h2>
-            <p style="font-size:13px; color:#d3c4b4; margin-bottom:20px; line-height:1.6;">
-                Choose your view to either analyse your own developer profile or search &amp; evaluate candidate portfolios.
-            </p>
 
             <div class="roles">
-                <label class="role-choice-card selected" id="choice-aspirant">
-                    <input type="radio" name="role" value="aspirant" checked>
-                    <div>
-                        <div style="font-weight:700; color:#ffefdd; font-size:13px;">Engineer / Aspirant</div>
-                        <div style="font-size:11px; color:#9b8f80;">Analyse my public profile &amp; scores</div>
-                    </div>
+                <label>
+                    <input type="radio" name="role" value="aspirant" checked> Aspirant (Analyze My Profile)
                 </label>
-                <label class="role-choice-card" id="choice-recruiter">
-                    <input type="radio" name="role" value="recruiter">
-                    <div>
-                        <div style="font-weight:700; color:#ffefdd; font-size:13px;">Recruiter</div>
-                        <div style="font-size:11px; color:#9b8f80;">Search candidates &amp; draft pitches</div>
-                    </div>
+                <label>
+                    <input type="radio" name="role" value="recruiter"> Recruiter (Search Candidates)
                 </label>
             </div>
 
-            <!-- Aspirant login & direct analysis options -->
-            <div id="aspirant-login-box">
-                <a href="/auth/github" class="btn btn-peach w-full flex items-center justify-center gap-2 mb-3" style="padding:12px;">
-                    <svg class="w-4 h-4 fill-current shrink-0" viewBox="0 0 24 24">
-                        <path clip-rule="evenodd"
-                            d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"
-                            fill-rule="evenodd" />
-                    </svg>
-                    <span>Connect &amp; Analyse with GitHub</span>
-                </a>
-                <p style="font-size:11px; color:#9b8f80; text-align:center; margin-bottom:16px;">
-                    Read-only public repositories access · No password stored
-                </p>
+            <!-- Shown when user is ALREADY signed in: lets user choose role freely -->
+            <button id="continue-signedin-btn" class="btn" style="display:none; width:100%;">
+                Continue as Aspirant
+            </button>
 
-                <!-- Quick direct analysis without login -->
-                <div style="border-top:1px solid rgba(255,205,130,0.12); padding-top:16px;">
-                    <p style="font-size:12px; color:#d3c4b4; margin-bottom:8px;">
-                        Or test instantly by entering any public GitHub username:
-                    </p>
-                    <div style="display:flex; gap:8px;">
-                        <input type="text" id="direct-username-input" placeholder="e.g. torvalds" style="font-size:13px; padding:10px 14px;">
-                        <button id="direct-analyze-btn" class="btn btn-outline" style="padding:10px 16px; font-size:13px; white-space:nowrap;">
-                            Analyze
-                        </button>
-                    </div>
+            <!-- Shown when user is NOT signed in -->
+            <a href="/auth/github" class="btn" id="login-link">Login with GitHub</a>
+            <button id="recruiter-bypass-btn" class="btn btn-outline"
+                style="display:none; margin-top: 10px; width: 100%;">Continue as Recruiter (No Login)</button>
+
+            <!-- Direct analyze input for quick testing -->
+            <div id="aspirant-quick-search" style="margin-top:18px; padding-top:16px; border-top:1px solid var(--border-brown);">
+                <p style="font-size:12px; color:var(--text-secondary); margin-bottom:8px;">Or enter any public GitHub username to analyze directly:</p>
+                <div style="display:flex; gap:8px;">
+                    <input type="text" id="direct-username-input" placeholder="e.g. torvalds" style="flex:1;">
+                    <button id="direct-analyze-btn" class="btn btn-outline" style="white-space:nowrap;">Analyze</button>
                 </div>
             </div>
-
-            <!-- Recruiter direct entry button -->
-            <button id="recruiter-bypass-btn" class="btn btn-cyan"
-                style="display:none; width:100%; padding:12px; font-size:14px; margin-top:10px;">
-                <span class="material-symbols-outlined" style="font-size:17px;">badge</span>
-                <span>Enter Recruiter Portal (No GitHub Login Required)</span>
-            </button>
         </div>
 
-        <!-- DASHBOARD SECTION -->
+        <!-- Dashboard Section (Box Model) -->
         <div id="dashboard-section" style="display:none;">
-
-            <!-- Header split -->
             <div class="header-split">
-                <div>
-                    <h2 id="dashboard-heading" style="margin-bottom:4px; font-size:1.8rem; color:#ffefdd;">
-                        Developer Intelligence Dashboard
-                    </h2>
-                    <div id="role-status-badge" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-outline-variant/30 bg-surface-container-low text-xs mono text-primary-container">
-                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-                        <span id="role-status-text">ENGINEER VIEW</span>
-                    </div>
+                <div style="display:flex; align-items:center; gap:12px;">
+                    <h2>Dashboard</h2>
+                    <span id="current-role-indicator" style="font-family:'JetBrains Mono',monospace; font-size:11px; padding:3px 10px; border-radius:999px; background:rgba(255,205,130,0.12); border:1px solid var(--border-brown); color:var(--accent-peach);">ASPIRANT</span>
+                </div>
+                <div class="header-actions">
+                    <button id="switch-role-btn" class="btn btn-outline" style="margin-right: 8px;">Switch Role</button>
+                    <button id="back-home-btn" class="btn btn-outline" style="margin-right: 8px;">Back</button>
+                    <button id="view-favorites-btn" class="btn btn-outline" style="display:none; margin-right: 8px;">Saved Candidates</button>
+                    <a href="/auth/logout" class="btn btn-outline" id="logout-btn" style="margin-right: 8px;">Logout</a>
+                    <a href="/" class="btn btn-outline" id="home-link-btn">Home</a>
                 </div>
             </div>
 
-            <!-- Favorites Section (Recruiter) -->
-            <div id="favorites-section" class="card glass" style="display:none; margin-bottom:24px;">
-                <div class="flex items-center justify-between mb-4">
-                    <h3 style="color:#ffcd82; margin:0; display:flex; align-items:center; gap:8px; font-size:1.2rem;">
-                        <span class="material-symbols-outlined" style="font-size:20px;">bookmark</span>
-                        Saved Candidate Profiles
-                    </h3>
-                    <button id="close-favorites-btn" class="cluster-close-btn">Close</button>
+            <div id="favorites-section" class="card" style="display:none; margin-bottom: 20px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                    <h3 style="margin:0; color:var(--accent-peach);">Saved Candidates</h3>
+                    <button id="close-favorites-btn" class="btn btn-outline" style="padding:4px 12px; font-size:12px;">Close</button>
                 </div>
                 <div id="favorites-list">
                     <!-- Favorites injected here -->
                 </div>
             </div>
 
-            <!-- Search Section (Recruiter / Candidate lookup) -->
-            <div id="search-section" class="card glass" style="display:none; margin-bottom:24px;">
-                <div class="w-full mb-1">
-                    <span class="mono" style="font-size:10px; color:#7bd0ff; letter-spacing:0.1em; text-transform:uppercase;">
-                        Candidate Search
-                    </span>
-                    <h3 style="font-size:1.15rem; color:#ffefdd; margin-top:2px; margin-bottom:12px;">
-                        Evaluate Any GitHub Footprint
-                    </h3>
+            <div id="search-section" class="card" style="display:none; margin-bottom: 20px;">
+                <input type="text" id="candidate-username" placeholder="Enter GitHub Username to analyze...">
+                <button id="search-btn" class="btn">Analyze Candidate</button>
+            </div>
+
+            <div id="results" class="results-box card" style="display:none;">
+                <!-- Data will be injected here -->
+            </div>
+
+            <div id="aspirant-actions" style="display:none; text-align:center; margin-top:20px;">
+                <button id="improve-profile-btn" class="btn" style="padding:12px 24px; font-size:15px;">Improve My
+                    Profile (AI)</button>
+                <button id="cluster-repos-btn" class="btn"
+                    style="padding:12px 24px; font-size:15px; margin-left:12px; background: linear-gradient(135deg, #7c3aed, #2563eb); color:white; border:none;">Cluster
+                    Repos</button>
+            </div>
+
+            <div id="cluster-results" class="card" style="display:none; margin-top:20px; text-align:left;">
+                <div class="cluster-header">
+                    <h3 style="color:var(--accent-peach); margin:0;">&#x1F4CA; Repository Clusters (K-Means + TF-IDF)</h3>
+                    <button id="close-cluster-btn" class="cluster-close-btn">&times; Close</button>
                 </div>
-                <div style="display:flex; gap:12px; width:100%; flex-wrap:wrap;">
-                    <input type="text" id="candidate-username" placeholder="Enter GitHub username to analyze (e.g. gaearon, torvalds)..." style="flex:1; min-width:260px;">
-                    <button id="search-btn" class="btn btn-peach" style="white-space:nowrap;">
-                        <span class="material-symbols-outlined" style="font-size:17px;">search</span>
-                        Analyze Candidate
-                    </button>
-                </div>
+                <p style="color:var(--text-secondary); margin-bottom:20px; font-size:0.9rem;">Your repositories have been semantically
+                    grouped using a custom TF-IDF vectorisation and K-Means clustering algorithm.</p>
+                <div id="cluster-groups"></div>
             </div>
-
-            <!-- Results Panel -->
-            <div id="results" class="results-box card glass" style="display:none;">
-                <!-- Data dynamically injected by app.js -->
-            </div>
-
-            <!-- Aspirant Actions (Improve profile, Cluster Repos) -->
-            <div id="aspirant-actions" style="display:none; text-align:center; margin-top:24px;">
-                <button id="improve-profile-btn" class="btn btn-peach" style="padding:12px 26px; font-size:15px; margin-right:12px;">
-                    <span class="material-symbols-outlined" style="font-size:18px;">auto_awesome</span>
-                    Improve My Profile (AI)
-                </button>
-                <button id="cluster-repos-btn" class="btn btn-cluster" style="padding:12px 26px; font-size:15px;">
-                    <span class="material-symbols-outlined" style="font-size:18px;">category</span>
-                    Cluster Repos (K-Means)
-                </button>
-            </div>
-
-            <!-- K-Means Cluster Results Panel -->
-            <div id="cluster-results" class="card glass" style="display:none; margin-top:24px; text-align:left;">
-                <div class="flex items-center justify-between mb-3">
-                    <div class="flex items-center gap-2">
-                        <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background:rgba(139,92,246,0.15); border:1px solid rgba(139,92,246,0.3); color:#c084fc;">
-                            <span class="material-symbols-outlined" style="font-size:18px;">category</span>
-                        </div>
-                        <div>
-                            <h3 style="color:#ffcd82; margin:0; font-size:1.25rem;">Repository Clusters (K-Means + TF-IDF)</h3>
-                            <p style="color:#9b8f80; margin:0; font-size:0.85rem;">
-                                Unsupervised semantic clustering over descriptions and readme content.
-                            </p>
-                        </div>
-                    </div>
-                    <button id="close-cluster-btn" class="cluster-close-btn" title="Dismiss cluster results">
-                        ✕ Close
-                    </button>
-                </div>
-                <div id="cluster-groups" style="margin-top:16px;"></div>
-            </div>
-
         </div>
     </div>
-
-    <!-- ═══════════════ MODALS ═══════════════ -->
 
     <!-- Modal for Commits -->
     <div id="commits-modal" class="modal-overlay" style="display:none;">
         <div class="modal-content">
             <button class="close-modal" id="close-commits-modal">&times;</button>
-            <div class="flex items-center gap-2 mb-3">
-                <span class="material-symbols-outlined text-primary-container" style="font-size:20px;">commit</span>
-                <h3 style="color:#ffcd82; margin:0; font-size:1.2rem;">Recent Commits: <span id="modal-repo-name" class="mono text-secondary"></span></h3>
-            </div>
+            <h3 style="color:var(--accent-peach);">Recent Commits: <span id="modal-repo-name"></span></h3>
             <div id="commits-list">
                 Loading...
             </div>
         </div>
     </div>
 
-    <!-- Modal for Profile Improvements -->
+    <!-- Modal for Improvements -->
     <div id="improve-modal" class="modal-overlay" style="display:none;">
         <div class="modal-content">
             <button class="close-modal" id="close-improve-modal">&times;</button>
-            <div class="flex items-center gap-2 mb-3">
-                <span class="material-symbols-outlined text-primary-container" style="font-size:22px;">auto_awesome</span>
-                <h3 style="color:#ffcd82; margin:0; font-size:1.25rem;">AI Profile Improvements</h3>
-            </div>
-            <div id="improve-loading" style="display:none; color:#7bd0ff; padding:20px 0; text-align:center;">
-                <span class="material-symbols-outlined animate-spin" style="font-size:24px; vertical-align:middle; margin-right:8px;">progress_activity</span>
-                Generating tailored suggestions with Gemini...
-            </div>
-            <div id="improve-suggestions" style="display:none; line-height:1.7;">
+            <h3 style="color:var(--accent-peach);">AI Profile Improvements</h3>
+            <div id="improve-loading" style="display:none;">Generating perfect suggestions...</div>
+            <div id="improve-suggestions" style="display:none;">
                 <!-- Auto-Generated text injected here -->
             </div>
             <br>
-            <button id="apply-fixes-btn" class="btn btn-peach" style="width:100%; display:none; padding:12px;">
-                <span class="material-symbols-outlined" style="font-size:18px;">check_circle</span>
-                Fix It For Me (Apply to GitHub)
-            </button>
+            <button id="apply-fixes-btn" class="btn" style="width:100%; display:none;">Fix It For Me (Apply to
+                GitHub)</button>
         </div>
     </div>
 
@@ -315,21 +152,13 @@
     <div id="pitch-modal" class="modal-overlay" style="display:none;">
         <div class="modal-content">
             <button class="close-modal" id="close-pitch-modal">&times;</button>
-            <div class="flex items-center gap-2 mb-3">
-                <span class="material-symbols-outlined text-secondary" style="font-size:22px;">mail</span>
-                <h3 style="color:#ffcd82; margin:0; font-size:1.25rem;">AI Generated Outreach Pitch</h3>
-            </div>
-            <div id="pitch-loading" style="display:none; color:#7bd0ff; padding:20px 0; text-align:center;">
-                <span class="material-symbols-outlined animate-spin" style="font-size:24px; vertical-align:middle; margin-right:8px;">progress_activity</span>
-                Drafting candidate email with Gemini...
-            </div>
+            <h3 style="color:var(--accent-peach);">AI Generated Outreach Pitch</h3>
+            <div id="pitch-loading" style="display:none;">Drafting the perfect email...</div>
             <textarea id="pitch-textarea"
-                style="display:none; width:100%; height:220px; margin-top:15px; padding:14px; background:rgba(11,19,38,0.9); color:#dae2fd; border:1px solid rgba(255,205,130,0.2); border-radius:12px; font-family:'Inter',sans-serif; font-size:13px; line-height:1.6;"
+                style="display:none; width:100%; height:200px; margin-top:15px; padding:10px; background:#0b1928; color:var(--text-light-blue); border:1px solid var(--border-brown); border-radius:5px;"
                 readonly></textarea>
-            <button id="copy-pitch-btn" class="btn btn-peach" style="width:100%; display:none; margin-top:15px; padding:12px;">
-                <span class="material-symbols-outlined" style="font-size:18px;">content_copy</span>
-                Copy to Clipboard
-            </button>
+            <button id="copy-pitch-btn" class="btn" style="width:100%; display:none; margin-top:15px;">Copy to
+                Clipboard</button>
         </div>
     </div>
 

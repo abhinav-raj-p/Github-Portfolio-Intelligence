@@ -10,13 +10,28 @@ document.addEventListener('DOMContentLoaded', async () => {
     const favoritesList = document.getElementById('favorites-list');
     const closeFavoritesBtn = document.getElementById('close-favorites-btn');
 
-    // Modal elements
+    // Navigation and Action buttons
+    const backHomeBtn = document.getElementById('back-home-btn');
+    const switchRoleBtn = document.getElementById('switch-role-btn');
+    const logoutBtn = document.getElementById('logout-btn');
+    const roleIndicator = document.getElementById('current-role-indicator');
+
+    // Role selection elements
+    const roleRadios = document.querySelectorAll('input[name="role"]');
+    const loginLink = document.getElementById('login-link');
+    const recruiterBypassBtn = document.getElementById('recruiter-bypass-btn');
+    const continueSignedInBtn = document.getElementById('continue-signedin-btn');
+    const userStatusBar = document.getElementById('user-status-bar');
+    const loggedInUsernameEl = document.getElementById('logged-in-username');
+    const aspirantQuickSearch = document.getElementById('aspirant-quick-search');
+
+    // Modals
     const commitsModal = document.getElementById('commits-modal');
     const closeCommitsBtn = document.getElementById('close-commits-modal');
     const commitsList = document.getElementById('commits-list');
     const modalRepoName = document.getElementById('modal-repo-name');
 
-    // Improve profile modal elements
+    // Improve profile modal
     const aspirantActions = document.getElementById('aspirant-actions');
     const improveProfileBtn = document.getElementById('improve-profile-btn');
     const improveModal = document.getElementById('improve-modal');
@@ -25,23 +40,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     const improveSuggestions = document.getElementById('improve-suggestions');
     const applyFixesBtn = document.getElementById('apply-fixes-btn');
 
-    // Pitch elements
+    // Recruiter AI Pitch modal
     const pitchModal = document.getElementById('pitch-modal');
     const closePitchModal = document.getElementById('close-pitch-modal');
     const pitchLoading = document.getElementById('pitch-loading');
     const pitchTextarea = document.getElementById('pitch-textarea');
     const copyPitchBtn = document.getElementById('copy-pitch-btn');
-
-    // Navbar & Buttons
-    const backHomeBtn = document.getElementById('back-home-btn');
-    const logoutBtn = document.getElementById('logout-btn');
-    const roleAspirantBtn = document.getElementById('role-aspirant-btn');
-    const roleRecruiterBtn = document.getElementById('role-recruiter-btn');
-    const recruiterBypassBtn = document.getElementById('recruiter-bypass-btn');
-    const roleRadios = document.querySelectorAll('input[name="role"]');
-    const choiceAspirant = document.getElementById('choice-aspirant');
-    const choiceRecruiter = document.getElementById('choice-recruiter');
-    const loginLink = document.querySelector('a[href="/auth/github"]');
 
     let currentRole = 'aspirant';
     let currentUser = null;
@@ -58,160 +62,135 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     window.hideClusterResults = hideClusterResults;
 
-    // Determine initial role: Query param > sessionStorage > localStorage > default ('aspirant')
-    const urlParams = new URLSearchParams(window.location.search);
-    const paramRole = urlParams.get('role');
-
-    if (paramRole === 'aspirant' || paramRole === 'recruiter') {
-        currentRole = paramRole;
-        localStorage.setItem('role', currentRole);
-        sessionStorage.setItem('gitview_role', currentRole);
-    } else if (sessionStorage.getItem('gitview_role') === 'recruiter' || sessionStorage.getItem('gitview_role') === 'aspirant') {
-        currentRole = sessionStorage.getItem('gitview_role');
-        localStorage.setItem('role', currentRole);
-    } else if (localStorage.getItem('role') === 'recruiter' || localStorage.getItem('role') === 'aspirant') {
-        currentRole = localStorage.getItem('role');
-    } else {
-        currentRole = 'aspirant';
-        localStorage.setItem('role', 'aspirant');
-        sessionStorage.setItem('gitview_role', 'aspirant');
-    }
-
-    // Role state management function
-    function applyRole(role, reAnalyze = true) {
+    // Enter a specific role in the dashboard
+    function enterDashboard(role) {
         currentRole = role;
         localStorage.setItem('role', role);
         sessionStorage.setItem('gitview_role', role);
 
-        // Hide any existing K-Means results whenever role changes
         hideClusterResults();
 
-        const roleStatusText = document.getElementById('role-status-text');
-        const aspirantLoginBox = document.getElementById('aspirant-login-box');
+        loginSection.style.display = 'none';
+        dashboardSection.style.display = 'block';
 
-        if (role === 'aspirant') {
-            if (roleAspirantBtn) roleAspirantBtn.classList.add('active');
-            if (roleRecruiterBtn) roleRecruiterBtn.classList.remove('active', 'recruiter-pill');
-            if (roleStatusText) roleStatusText.textContent = 'ENGINEER VIEW';
-
-            if (choiceAspirant) choiceAspirant.classList.add('selected');
-            if (choiceRecruiter) choiceRecruiter.classList.remove('selected');
-            const aspRadio = document.querySelector('input[name="role"][value="aspirant"]');
-            if (aspRadio) aspRadio.checked = true;
-
-            if (recruiterBypassBtn) recruiterBypassBtn.style.display = 'none';
-            if (aspirantLoginBox) aspirantLoginBox.style.display = 'block';
-
+        if (role === 'recruiter') {
+            if (roleIndicator) roleIndicator.textContent = 'RECRUITER';
+            searchSection.style.display = 'block';
+            viewFavoritesBtn.style.display = 'inline-block';
+            if (aspirantActions) aspirantActions.style.display = 'none';
+        } else {
+            if (roleIndicator) roleIndicator.textContent = 'ASPIRANT';
             searchSection.style.display = 'none';
             viewFavoritesBtn.style.display = 'none';
             favoritesSection.style.display = 'none';
 
-            if (currentReport && resultsBox.style.display !== 'none') {
-                if (aspirantActions) aspirantActions.style.display = 'block';
-            }
-
-            if (currentUser && reAnalyze) {
-                loginSection.style.display = 'none';
-                dashboardSection.style.display = 'block';
+            if (currentUser) {
                 analyzeUser(currentUser.username || currentUser.login);
             }
-        } else {
-            // Recruiter role
-            if (roleAspirantBtn) roleAspirantBtn.classList.remove('active');
-            if (roleRecruiterBtn) roleRecruiterBtn.classList.add('active', 'recruiter-pill');
-            if (roleStatusText) roleStatusText.textContent = 'RECRUITER PORTAL';
-
-            if (choiceAspirant) choiceAspirant.classList.remove('selected');
-            if (choiceRecruiter) choiceRecruiter.classList.add('selected');
-            const recRadio = document.querySelector('input[name="role"][value="recruiter"]');
-            if (recRadio) recRadio.checked = true;
-
-            if (recruiterBypassBtn) recruiterBypassBtn.style.display = 'flex';
-            if (aspirantLoginBox) aspirantLoginBox.style.display = 'none';
-
-            // Recruiter can use dashboard without login
-            loginSection.style.display = 'none';
-            dashboardSection.style.display = 'block';
-            searchSection.style.display = 'block';
-            viewFavoritesBtn.style.display = 'inline-flex';
-
-            if (aspirantActions) aspirantActions.style.display = 'none';
         }
     }
 
-    // Role switcher navbar buttons
-    if (roleAspirantBtn) {
-        roleAspirantBtn.addEventListener('click', () => applyRole('aspirant', true));
-    }
-    if (roleRecruiterBtn) {
-        roleRecruiterBtn.addEventListener('click', () => applyRole('recruiter', false));
+    // Update role choice UI inside login/role section
+    function updateRoleSelectionUI(selectedRole) {
+        if (currentUser) {
+            // User IS signed in: they choose role with the continue button
+            if (continueSignedInBtn) {
+                continueSignedInBtn.style.display = 'block';
+                continueSignedInBtn.textContent = selectedRole === 'recruiter'
+                    ? 'Continue as Recruiter (Search Candidates)'
+                    : 'Continue as Aspirant (Analyze My Profile)';
+            }
+            if (loginLink) loginLink.style.display = 'none';
+            if (recruiterBypassBtn) recruiterBypassBtn.style.display = 'none';
+            if (aspirantQuickSearch) aspirantQuickSearch.style.display = selectedRole === 'aspirant' ? 'block' : 'none';
+        } else {
+            // User is NOT signed in
+            if (continueSignedInBtn) continueSignedInBtn.style.display = 'none';
+            if (selectedRole === 'recruiter') {
+                if (recruiterBypassBtn) recruiterBypassBtn.style.display = 'block';
+                if (loginLink) loginLink.style.display = 'none';
+                if (aspirantQuickSearch) aspirantQuickSearch.style.display = 'none';
+            } else {
+                if (recruiterBypassBtn) recruiterBypassBtn.style.display = 'none';
+                if (loginLink) loginLink.style.display = 'inline-block';
+                if (aspirantQuickSearch) aspirantQuickSearch.style.display = 'block';
+            }
+        }
     }
 
-    // Choice card clicks in login view
-    if (choiceAspirant) {
-        choiceAspirant.addEventListener('click', () => applyRole('aspirant', false));
-    }
-    if (choiceRecruiter) {
-        choiceRecruiter.addEventListener('click', () => applyRole('recruiter', false));
-    }
-
-    // Radio change listeners
+    // Role radio change
     roleRadios.forEach(radio => {
         radio.addEventListener('change', (e) => {
-            applyRole(e.target.value, false);
+            currentRole = e.target.value;
+            localStorage.setItem('role', currentRole);
+            updateRoleSelectionUI(currentRole);
         });
     });
 
+    // Continue button when signed in
+    if (continueSignedInBtn) {
+        continueSignedInBtn.addEventListener('click', () => {
+            const checked = document.querySelector('input[name="role"]:checked');
+            const chosen = checked ? checked.value : 'aspirant';
+            enterDashboard(chosen);
+        });
+    }
+
+    // Recruiter bypass when not signed in
     if (recruiterBypassBtn) {
         recruiterBypassBtn.addEventListener('click', () => {
-            applyRole('recruiter', false);
+            enterDashboard('recruiter');
         });
     }
 
+    // Login link click
     if (loginLink) {
         loginLink.addEventListener('click', () => {
-            localStorage.setItem('role', 'aspirant');
-            sessionStorage.setItem('gitview_role', 'aspirant');
+            const checked = document.querySelector('input[name="role"]:checked');
+            const chosen = checked ? checked.value : 'aspirant';
+            localStorage.setItem('role', chosen);
+            sessionStorage.setItem('gitview_role', chosen);
         });
     }
 
-    // Check Authentication
-    try {
-        const response = await fetch('/auth/check');
-        const data = await response.json();
-
-        if (data.authenticated) {
-            currentUser = data.user;
-            if (logoutBtn) logoutBtn.style.display = 'inline-flex';
-
-            // Apply selected role
-            applyRole(currentRole, true);
-        } else {
-            // Not authenticated: if user specifically asked for recruiter, show recruiter dashboard directly
-            if (currentRole === 'recruiter') {
-                applyRole('recruiter', false);
-            } else {
-                applyRole('aspirant', false);
-                loginSection.style.display = 'block';
-                dashboardSection.style.display = 'none';
-            }
-        }
-    } catch (err) {
-        console.error('Error checking auth', err);
-        if (currentRole === 'recruiter') {
-            applyRole('recruiter', false);
-        }
+    // Switch Role button in dashboard
+    if (switchRoleBtn) {
+        switchRoleBtn.addEventListener('click', () => {
+            dashboardSection.style.display = 'none';
+            loginSection.style.display = 'block';
+            resultsBox.style.display = 'none';
+            favoritesSection.style.display = 'none';
+            hideClusterResults();
+            updateRoleSelectionUI(currentRole);
+        });
     }
 
-    // Direct username input for quick instant analysis without GitHub login
+    // Back button in dashboard
+    if (backHomeBtn) {
+        backHomeBtn.addEventListener('click', () => {
+            dashboardSection.style.display = 'none';
+            loginSection.style.display = 'block';
+            resultsBox.style.display = 'none';
+            favoritesSection.style.display = 'none';
+            hideClusterResults();
+            updateRoleSelectionUI(currentRole);
+        });
+    }
+
+    // Direct username input for quick testing
     const directInput = document.getElementById('direct-username-input');
     const directBtn = document.getElementById('direct-analyze-btn');
     if (directBtn && directInput) {
         const runDirect = () => {
             const username = directInput.value.trim();
             if (username) {
+                currentRole = 'aspirant';
+                localStorage.setItem('role', 'aspirant');
                 loginSection.style.display = 'none';
                 dashboardSection.style.display = 'block';
+                searchSection.style.display = 'none';
+                viewFavoritesBtn.style.display = 'none';
+                if (roleIndicator) roleIndicator.textContent = 'ASPIRANT';
                 analyzeUser(username);
             }
         };
@@ -219,6 +198,61 @@ document.addEventListener('DOMContentLoaded', async () => {
         directInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') runDirect();
         });
+    }
+
+    // Check Authentication on Page Load
+    const urlParams = new URLSearchParams(window.location.search);
+    const roleParam = urlParams.get('role');
+
+    try {
+        const response = await fetch('/auth/check');
+        const data = await response.json();
+
+        if (data.authenticated) {
+            currentUser = data.user;
+            if (logoutBtn) logoutBtn.style.display = 'inline-block';
+            if (userStatusBar && loggedInUsernameEl) {
+                loggedInUsernameEl.textContent = `@${currentUser.username || currentUser.login}`;
+                userStatusBar.style.display = 'block';
+            }
+
+            // CRITICAL: If the URL explicitly specifies a role (e.g. from clicking on landing page), honor it.
+            // Otherwise, let the signed-in user CHOOSE their role on the role selection card!
+            if (roleParam === 'recruiter') {
+                const recRadio = document.querySelector('input[name="role"][value="recruiter"]');
+                if (recRadio) recRadio.checked = true;
+                enterDashboard('recruiter');
+            } else if (roleParam === 'aspirant') {
+                const aspRadio = document.querySelector('input[name="role"][value="aspirant"]');
+                if (aspRadio) aspRadio.checked = true;
+                enterDashboard('aspirant');
+            } else {
+                // User is signed in, but no URL param: show role selection so they can CHOOSE their role!
+                loginSection.style.display = 'block';
+                dashboardSection.style.display = 'none';
+                const checked = document.querySelector('input[name="role"]:checked');
+                updateRoleSelectionUI(checked ? checked.value : 'aspirant');
+            }
+        } else {
+            // NOT authenticated
+            if (logoutBtn) logoutBtn.style.display = 'none';
+            if (userStatusBar) userStatusBar.style.display = 'none';
+
+            if (roleParam === 'recruiter') {
+                const recRadio = document.querySelector('input[name="role"][value="recruiter"]');
+                if (recRadio) recRadio.checked = true;
+                enterDashboard('recruiter');
+            } else {
+                loginSection.style.display = 'block';
+                dashboardSection.style.display = 'none';
+                const checked = document.querySelector('input[name="role"]:checked');
+                updateRoleSelectionUI(checked ? checked.value : 'aspirant');
+            }
+        }
+    } catch (err) {
+        console.error('Error checking auth', err);
+        loginSection.style.display = 'block';
+        dashboardSection.style.display = 'none';
     }
 
     // Search button click
@@ -233,10 +267,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Favorites Logic
     viewFavoritesBtn.addEventListener('click', async () => {
-        hideClusterResults(); // Hide K-Means output when viewing favorites
+        hideClusterResults(); // CRITICAL: hide K-Means output when viewing favorites
         favoritesSection.style.display = 'block';
         resultsBox.style.display = 'none';
-        favoritesList.innerHTML = '<p style="color:#7bd0ff;">Loading saved candidates...</p>';
+        favoritesList.innerHTML = '<p>Loading saved candidates...</p>';
         try {
             const res = await fetch('/api/favorites');
             const data = await res.json();
@@ -247,7 +281,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             if (data.length === 0) {
-                favoritesList.innerHTML = '<p style="color:#9b8f80; font-size:13px;">No saved candidates yet. Analyze a profile to save candidates.</p>';
+                favoritesList.innerHTML = '<p style="color:var(--text-secondary);">No saved candidates yet.</p>';
                 return;
             }
 
@@ -261,20 +295,20 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             let html = '';
             for (const [drive, candidates] of Object.entries(grouped)) {
-                html += `<h4 style="margin-top: 18px; color: var(--accent-peach); border-bottom: 1px solid rgba(255,205,130,0.12); padding-bottom: 6px; font-size:0.95rem;">Drive: ${drive}</h4>`;
+                html += `<h4 style="margin-top: 20px; color: var(--accent-peach); border-bottom: 1px solid var(--border-brown); padding-bottom: 5px;">Drive: ${drive}</h4>`;
                 html += candidates.map(c => `
                     <div class="saved-item">
                         <div style="display:flex; align-items:center;">
-                            <img src="${c.avatar_url}" style="width:42px; height:42px; border-radius:50%; margin-right:12px; border:1px solid rgba(255,205,130,0.25);" alt="${c.candidate_username}">
+                            <img src="${c.avatar_url}" style="width:40px; height:40px; border-radius:50%; margin-right:12px; border:1px solid var(--accent-peach);" alt="${c.candidate_username}">
                             <div class="saved-item-info" style="margin-left: 0;">
                                 <strong>${c.candidate_name || c.candidate_username}</strong>
                                 <div>@${c.candidate_username}</div>
                             </div>
                         </div>
-                        <strong class="mono" style="color:var(--accent-peach); font-size:14px;">Score: ${c.score}/100</strong>
+                        <strong style="color:var(--accent-peach);">Score: ${c.score}</strong>
                         <div style="display:flex; gap: 8px;">
-                            <button class="btn btn-outline" style="padding: 6px 14px; font-size:12px;" onclick="loadCandidate('${c.candidate_username}')">View</button>
-                            <button class="btn" style="padding: 6px 12px; font-size:12px; background: rgba(239,68,68,0.2); border:1px solid rgba(239,68,68,0.4); color:#fca5a5;" onclick="deleteCandidate('${c.candidate_username}')">🗑️</button>
+                            <button class="btn btn-outline" style="padding: 5px 12px; font-size:12px;" onclick="loadCandidate('${c.candidate_username}')">View</button>
+                            <button class="btn" style="padding: 5px 10px; font-size:12px; background: #c62828; color: white;" onclick="deleteCandidate('${c.candidate_username}')">🗑️</button>
                         </div>
                     </div>
                 `).join('');
@@ -303,7 +337,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     window.loadCandidate = (username) => {
         candidateInput.value = username;
         favoritesSection.style.display = 'none';
-        hideClusterResults(); // Hide K-Means output when loading another candidate
+        hideClusterResults();
         analyzeUser(username);
     };
 
@@ -320,7 +354,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     window.openCommitsModal = async (username, repo) => {
         commitsModal.style.display = 'flex';
         modalRepoName.innerText = repo;
-        commitsList.innerHTML = '<p style="color:#7bd0ff;">Loading commits...</p>';
+        commitsList.innerHTML = '<p>Loading commits...</p>';
         try {
             const res = await fetch(`/api/commits/${username}/${repo}`);
             const data = await res.json();
@@ -329,13 +363,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                 return;
             }
             if (data.length === 0) {
-                commitsList.innerHTML = '<p style="color:#9b8f80;">No recent commits found.</p>';
+                commitsList.innerHTML = '<p style="color:var(--text-muted);">No commits found.</p>';
                 return;
             }
             commitsList.innerHTML = data.map(c => `
                 <div class="commit-item">
                     <p><strong>${c.message.split('\n')[0]}</strong></p>
-                    <small>${new Date(c.date).toLocaleString()} — <a href="${c.url}" target="_blank" style="color:var(--accent-cyan); text-decoration:none;">View on GitHub</a></small>
+                    <small style="color:var(--text-secondary);">${new Date(c.date).toLocaleString()} — <a href="${c.url}" target="_blank" style="color:var(--accent-cyan); text-decoration:none;">View on GitHub</a></small>
                 </div>
             `).join('');
         } catch (err) {
@@ -363,20 +397,20 @@ document.addEventListener('DOMContentLoaded', async () => {
             currentFixes = data.suggestions;
 
             if (!currentFixes || Object.keys(currentFixes).length === 0) {
-                improveSuggestions.innerHTML = `<p style="color:#34d399;">Your profile is already well-configured! No critical missing fields detected.</p>`;
+                improveSuggestions.innerHTML = `<p style="color:#34d399;">Your profile is already well-configured! No missing fields detected.</p>`;
                 improveSuggestions.style.display = 'block';
                 return;
             }
 
-            let html = `<p style="color:#dae2fd; margin-bottom:12px;">We noticed some empty fields on your GitHub. Here's what AI suggests you update:</p><ul style="padding-left:18px;">`;
+            let html = `<p style="color:var(--text-light-blue); margin-bottom:12px;">We noticed some empty fields on your GitHub. Here's what AI suggests you add:</p><ul style="padding-left:18px;">`;
             for (const [key, val] of Object.entries(currentFixes)) {
-                html += `<li style="margin-bottom:10px;"><strong style="color:var(--accent-peach);">${key.toUpperCase()}:</strong> <span style="color:#ffefdd;">${val}</span></li>`;
+                html += `<li style="margin-bottom:10px;"><strong style="color:var(--accent-peach);">${key.toUpperCase()}:</strong> <span style="color:var(--text-white);">${val}</span></li>`;
             }
             html += `</ul>`;
 
             improveSuggestions.innerHTML = html;
             improveSuggestions.style.display = 'block';
-            applyFixesBtn.style.display = 'inline-flex';
+            applyFixesBtn.style.display = 'inline-block';
 
         } catch (err) {
             improveLoading.style.display = 'none';
@@ -462,7 +496,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 pitchTextarea.value = 'Error generating pitch: ' + data.error;
             } else {
                 pitchTextarea.value = data.emailText;
-                copyPitchBtn.style.display = 'inline-flex';
+                copyPitchBtn.style.display = 'inline-block';
             }
             pitchTextarea.style.display = 'block';
         } catch (err) {
@@ -473,30 +507,25 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
 
     async function analyzeUser(username) {
-        hideClusterResults(); // CRITICAL: Always hide K-Means output when analyzing any user
+        hideClusterResults(); // CRITICAL: hide previous K-Means output when analyzing profile
         resultsBox.style.display = 'block';
         favoritesSection.style.display = 'none';
-        resultsBox.innerHTML = `
-            <div style="text-align:center; padding:40px 20px;">
-                <span class="material-symbols-outlined animate-spin" style="font-size:32px; color:var(--accent-peach); margin-bottom:12px;">progress_activity</span>
-                <p style="color:var(--text-white); font-size:1.1rem; font-weight:600; margin-bottom:4px;">Analyzing @${username}...</p>
-                <p style="color:var(--text-secondary); font-size:13px;">Fetching public repositories, scoring engineering metrics, and running NLP...</p>
-            </div>`;
+        resultsBox.innerHTML = '<p style="color:var(--accent-peach);">Analyzing profile... This may take a few seconds.</p>';
 
         try {
             const res = await fetch(`/api/analyze/${username}`);
             const data = await res.json();
 
             if (data.error) {
-                resultsBox.innerHTML = `<div style="padding:20px; color:#f87171; text-align:center;"><p>Error: ${data.error}</p></div>`;
+                resultsBox.innerHTML = `<p style="color:#f87171">Error: ${data.error}</p>`;
                 return;
             }
 
             currentReport = data;
-            window.lastReport = data; // Expose for cluster feature
+            window.lastReport = data;
             renderResults(data);
         } catch (err) {
-            resultsBox.innerHTML = `<div style="padding:20px; color:#f87171; text-align:center;"><p>Error fetching candidate data.</p></div>`;
+            resultsBox.innerHTML = `<p style="color:#f87171">Error fetching data.</p>`;
         }
     }
 
@@ -548,23 +577,17 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         let saveBtnHtml = currentRole === 'recruiter'
             ? `<div style="margin-left:auto; display:flex; gap:10px; flex-wrap:wrap;">
-                <button class="btn btn-cluster" onclick="document.getElementById('cluster-repos-btn').click()">
-                    <span class="material-symbols-outlined" style="font-size:16px;">category</span> Cluster Repos
-                </button>
-                <button id="draft-pitch-btn" class="btn btn-outline" onclick="draftPitch()">
-                    <span class="material-symbols-outlined" style="font-size:16px;">mail</span> AI Outreach Pitch
-                </button>
-                <button id="save-candidate-btn" class="btn btn-peach" onclick="saveCandidate()">
-                    <span class="material-symbols-outlined" style="font-size:16px;">bookmark</span> Save Candidate
-                </button>
+                <button class="btn" style="background: linear-gradient(135deg, #7c3aed, #2563eb); border: none; color: white;" onclick="document.getElementById('cluster-repos-btn').click()">Cluster Repos</button>
+                <button id="draft-pitch-btn" class="btn btn-outline" onclick="draftPitch()">✨ AI Draft Pitch</button>
+                <button id="save-candidate-btn" class="btn" onclick="saveCandidate()">Save Candidate</button>
                </div>`
             : '';
 
         let reposHtml = '';
         if (data.repositories && data.repositories.length > 0) {
             reposHtml = `
-            <div style="margin-top: 32px;">
-                <h4 style="color:var(--accent-peach); font-size:1.15rem; margin-bottom:16px;">Top Repositories (${data.repositories.length})</h4>
+            <div style="margin-top: 30px;">
+                <h4 style="color:var(--accent-peach);">Top Repositories</h4>
                 <div class="repos-grid">
                     ${data.repositories.map(repo => {
                         let linksHtml = '';
@@ -575,90 +598,69 @@ document.addEventListener('DOMContentLoaded', async () => {
                             linksHtml += `<a href="${repo.apkUrl}" target="_blank" onclick="event.stopPropagation();" class="repo-badge">📱 APK</a>`;
                         }
                         if (repo.hasReadme) {
-                            linksHtml += `<span class="repo-badge" style="background:rgba(255,205,130,0.15); color:var(--accent-peach); border-color:rgba(255,205,130,0.3);">📖 Docs</span>`;
+                            linksHtml += `<span class="repo-badge" style="background:var(--accent-peach); color:var(--bg-dark);">📖 Docs</span>`;
                         }
 
                         return `
-                        <div class="repo-card" onclick="openCommitsModal('${data.username}', '${repo.name}')">
+                        <div class="repo-card" onclick="openCommitsModal('${data.username}', '${repo.name}')" style="position:relative;">
                             <h5>${repo.name}</h5>
-                            <p>${repo.description ? repo.description.substring(0, 80) + (repo.description.length > 80 ? '...' : '') : 'No description provided'}</p>
+                            <p>${repo.description ? repo.description.substring(0, 60) + '...' : 'No description'}</p>
                             <div class="stats">
                                 <span>⭐ ${repo.stargazers_count}</span>
-                                <span>${repo.language || 'Code'}</span>
+                                <span>${repo.language || 'Unknown'}</span>
                             </div>
-                            ${linksHtml ? `<div style="margin-top:10px;">${linksHtml}</div>` : ''}
+                            <div style="margin-top:10px;">${linksHtml}</div>
                         </div>`;
                     }).join('')}
                 </div>
             </div>`;
         }
 
+        // Clean Contained Box Model Structure (Exact match to previous layout)
         resultsBox.innerHTML = `
             <div class="profile-header">
                 <img src="${data.avatar_url}" alt="Avatar">
                 <div>
-                    <h3 style="margin:0; font-size:1.6rem; color:#ffefdd;">${data.name || data.username}</h3>
-                    <div class="mono" style="font-size:13px; color:#7bd0ff; margin-top:2px;">@${data.username}</div>
-                    ${data.bio ? `<p style="margin:6px 0 0 0; color:var(--text-secondary); font-size:13px; max-width:540px;">${data.bio}</p>` : ''}
+                    <h3 style="margin:0;">${data.name || data.username}</h3>
+                    ${data.bio ? `<p style="margin:5px 0 0 0; color:var(--text-secondary);">${data.bio}</p>` : ''}
                 </div>
                 ${saveBtnHtml}
             </div>
 
-            <div class="score">
-                <span>Total Engineering Score: <span style="background:linear-gradient(90deg,#ffcd82,#7bd0ff); -webkit-background-clip:text; -webkit-text-fill-color:transparent;">${s.total} / 100</span></span>
-                <span class="score-badge">${s.total >= 80 ? 'EXCEPTIONAL' : s.total >= 60 ? 'STRONG' : 'EMERGING'}</span>
-            </div>
+            <div class="score">Total Developer Score: ${s.total} / 100</div>
             
-            <div style="display:flex; gap: 32px; margin-bottom: 24px; flex-wrap:wrap;">
+            <div style="display:flex; gap: 40px; margin-bottom: 20px; flex-wrap:wrap;">
                 <div style="flex: 1; min-width:280px;">
-                    <h4 style="color:var(--accent-peach); font-size:1.05rem; margin-bottom:14px;">Algorithmic Radar Shape</h4>
-                    <div style="position: relative; height:260px; width:100%; margin-bottom:20px; background:rgba(11,19,38,0.5); border:1px solid rgba(255,205,130,0.08); border-radius:14px; padding:10px;">
+                    <h4 style="color:var(--accent-peach);">Algorithmic Breakdown</h4>
+                    <div style="position: relative; height:250px; width:100%; margin-bottom:20px;">
                         <canvas id="scoreRadarChart"></canvas>
                     </div>
                 </div>
 
                 <div style="flex: 1; min-width:280px;">
-                    <h4 style="color:var(--accent-peach); font-size:1.05rem; margin-bottom:14px;">Classic Dimensions</h4>
-                    <div class="progress-container">
-                        <div class="progress-label"><span>Impact (Stars, Forks)</span> <span>${s.impact}/40</span></div>
-                        <div class="progress-bar"><div class="progress-fill impact" style="width: ${(s.impact / 40) * 100}%;"></div></div>
-                    </div>
-                    <div class="progress-container">
-                        <div class="progress-label"><span>Activity (Repos, Recency)</span> <span>${s.activity}/30</span></div>
-                        <div class="progress-bar"><div class="progress-fill activity" style="width: ${(s.activity / 30) * 100}%;"></div></div>
-                    </div>
-                    <div class="progress-container">
-                        <div class="progress-label"><span>Network (Followers)</span> <span>${s.network}/15</span></div>
-                        <div class="progress-bar"><div class="progress-fill network" style="width: ${(s.network / 15) * 100}%;"></div></div>
-                    </div>
-                    <div class="progress-container">
-                        <div class="progress-label"><span>Profile Completeness</span> <span>${s.profile}/15</span></div>
-                        <div class="progress-bar"><div class="progress-fill profile" style="width: ${(s.profile / 15) * 100}%;"></div></div>
-                    </div>
-
-                    <div style="margin-top:20px; padding-top:14px; border-top:1px solid rgba(255,205,130,0.08);">
-                        <div class="metric"><span>Public Repos:</span> <strong>${data.public_repos}</strong></div>
-                        <div class="metric"><span>Total Stars:</span> <strong>${data.total_stars}</strong></div>
-                        <div class="metric"><span>Followers:</span> <strong>${data.followers}</strong></div>
-                        <div class="metric"><span>Top Languages:</span> <strong>${languagesHtml || 'None'}</strong></div>
-                    </div>
+                    <h4 style="color:var(--accent-peach);">Raw Metrics</h4>
+                    <div class="metric"><span>Public Repos:</span> <strong>${data.public_repos}</strong></div>
+                    <div class="metric"><span>Total Stars:</span> <strong>${data.total_stars}</strong></div>
+                    <div class="metric"><span>Followers:</span> <strong>${data.followers}</strong></div>
+                    <div class="metric"><span>Top Languages:</span> <strong>${languagesHtml || 'None'}</strong></div>
+                    <br>
+                    <h4 style="color:var(--accent-peach);">Classic Scores</h4>
+                    <div class="progress-container"><div class="progress-label"><span>Impact</span> <span>${s.impact}/40</span></div><div class="progress-bar"><div class="progress-fill impact" style="width: ${(s.impact / 40) * 100}%;"></div></div></div>
+                    <div class="progress-container"><div class="progress-label"><span>Activity</span> <span>${s.activity}/30</span></div><div class="progress-bar"><div class="progress-fill activity" style="width: ${(s.activity / 30) * 100}%;"></div></div></div>
+                    <div class="progress-container"><div class="progress-label"><span>Network</span> <span>${s.network}/15</span></div><div class="progress-bar"><div class="progress-fill network" style="width: ${(s.network / 15) * 100}%;"></div></div></div>
+                    <div class="progress-container"><div class="progress-label"><span>Profile</span> <span>${s.profile}/15</span></div><div class="progress-bar"><div class="progress-fill profile" style="width: ${(s.profile / 15) * 100}%;"></div></div></div>
                 </div>
             </div>
             
             ${reposHtml}
 
-            <div class="ai-summary">
-                <div class="flex items-center gap-2 mb-2">
-                    <span class="material-symbols-outlined text-primary-container" style="font-size:20px;">auto_awesome</span>
-                    <h4 style="margin:0; color:var(--accent-peach); font-size:1.1rem;">
-                        ${currentRole === 'aspirant' ? 'Personalized Improvement Insights' : 'AI Candidate Summary'}
-                    </h4>
-                </div>
-                <div style="font-size:13.5px; line-height:1.7; color:#dae2fd;">${formattedAiSummary}</div>
+            <div class="ai-summary" style="margin-top: 30px;">
+                <h4 style="margin-top:0; color:var(--accent-peach);">${currentRole === 'aspirant' ? 'Personalized Improvement Insights' : 'AI Candidate Summary'}</h4>
+                <p style="margin-top: 10px; line-height: 1.6; margin-bottom: 0;">${formattedAiSummary}</p>
             </div>
         `;
 
-        // Render Radar Chart with landing page color palette
+        // Render Radar Chart with dark/peach color scheme
         const ctx = document.getElementById('scoreRadarChart').getContext('2d');
         if (radarChartInstance) radarChartInstance.destroy();
 
@@ -674,14 +676,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                         (s.network / 15) * 100,
                         (s.profile / 15) * 100
                     ],
-                    backgroundColor: 'rgba(255, 205, 130, 0.22)',
+                    backgroundColor: 'rgba(255, 205, 130, 0.35)',
                     borderColor: '#ffcd82',
                     borderWidth: 2,
                     pointBackgroundColor: '#7bd0ff',
-                    pointBorderColor: '#ffefdd',
+                    pointBorderColor: '#fff',
                     pointHoverBackgroundColor: '#fff',
-                    pointHoverBorderColor: '#7bd0ff',
-                    pointRadius: 4
+                    pointHoverBorderColor: '#7bd0ff'
                 }]
             },
             options: {
@@ -689,12 +690,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 maintainAspectRatio: false,
                 scales: {
                     r: {
-                        angleLines: { color: 'rgba(218, 226, 253, 0.1)' },
-                        grid: { color: 'rgba(218, 226, 253, 0.08)' },
-                        pointLabels: {
-                            color: '#dae2fd',
-                            font: { family: "'Inter', sans-serif", size: 12, weight: '500' }
-                        },
+                        angleLines: { color: 'rgba(255,255,255,0.1)' },
+                        grid: { color: 'rgba(255,255,255,0.1)' },
+                        pointLabels: { color: '#dae2fd', font: { size: 12 } },
                         ticks: { display: false, min: 0, max: 100 }
                     }
                 },
@@ -738,8 +736,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 return;
             }
 
-            const originalText = clusterBtn.innerHTML;
-            clusterBtn.innerHTML = '<span class="material-symbols-outlined animate-spin" style="font-size:18px;">progress_activity</span> Clustering...';
+            clusterBtn.textContent = 'Clustering...';
             clusterBtn.disabled = true;
 
             try {
@@ -756,7 +753,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             } catch (err) {
                 alert('Clustering failed: ' + err.message);
             } finally {
-                clusterBtn.innerHTML = originalText;
+                clusterBtn.textContent = 'Cluster Repos';
                 clusterBtn.disabled = false;
             }
         });
@@ -765,27 +762,25 @@ document.addEventListener('DOMContentLoaded', async () => {
     function renderClusters(clusters) {
         const container = document.getElementById('cluster-groups');
         const panel = document.getElementById('cluster-results');
-        const colors = ['#ffcd82', '#7bd0ff', '#a78bfa', '#34d399', '#f472b6'];
+        const colors = ['#3b82f6', '#8b5cf6', '#ec4899'];
 
         container.innerHTML = '';
         clusters.forEach((cluster, i) => {
             const color = colors[i % colors.length];
             const card = document.createElement('div');
-            card.style.cssText = `border: 1px solid ${color}40; border-radius: 14px; padding: 18px; margin-bottom: 16px; background: rgba(11, 19, 38, 0.65); backdrop-filter: blur(10px);`;
+            card.style.cssText = `border:1px solid ${color}44; border-radius:12px; padding:16px; margin-bottom:16px; background:rgba(0,0,0,0.25);`;
 
             const tags = cluster.repos.map(r =>
-                `<span style="background:${color}18; border:1px solid ${color}45; color:${color}; border-radius:999px; padding:4px 12px; font-size:11px; font-family:'JetBrains Mono',monospace; margin:3px; display:inline-block;">${r.name}</span>`
+                `<span style="background:${color}22; border:1px solid ${color}66; color:${color}; border-radius:999px; padding:3px 12px; font-size:0.8rem; margin:3px; display:inline-block;">${r.name}</span>`
             ).join('');
 
             card.innerHTML = `
-            <div style="display:flex; align-items:center; margin-bottom:12px;">
-                <span style="width:10px; height:10px; border-radius:50%; background:${color}; box-shadow:0 0 10px ${color}; margin-right:10px;"></span>
-                <strong style="font-size:1.05rem; color:#ffefdd; font-family:'Plus Jakarta Sans',sans-serif;">${cluster.label}</strong>
-                <span style="margin-left:auto; font-size:11px; font-family:'JetBrains Mono',monospace; color:#9b8f80; background:rgba(255,255,255,0.05); padding:2px 8px; border-radius:999px;">
-                    ${cluster.repos.length} repo${cluster.repos.length !== 1 ? 's' : ''}
-                </span>
+            <div style="display:flex; align-items:center; margin-bottom:10px;">
+                <span style="width:12px; height:12px; border-radius:50%; background:${color}; margin-right:10px;"></span>
+                <strong style="font-size:1.1rem; color:#ffefdd;">${cluster.label}</strong>
+                <span style="margin-left:auto; font-size:0.8rem; color:#94a3b8;">${cluster.repos.length} repo${cluster.repos.length !== 1 ? 's' : ''}</span>
             </div>
-            <div style="display:flex; flex-wrap:wrap; gap:4px;">${tags}</div>`;
+            <div>${tags}</div>`;
             container.appendChild(card);
         });
 
