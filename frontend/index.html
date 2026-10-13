@@ -1,75 +1,821 @@
 <!DOCTYPE html>
-<html lang="en">
+<html class="dark" lang="en">
 
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GitHub Portfolio Intelligence</title>
-    <!-- Use Google Fonts for modern typography -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="landing-style.css">
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GitView — GitHub Portfolio Intelligence</title>
+    <meta name="description"
+        content="Analyse your public GitHub profile, organise your repositories by category, and generate an engineering score for recruiters to understand your work at a glance." />
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@600;700;800;900&display=swap"
+        rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+        rel="stylesheet" />
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "surface-container-high": "#222a3d",
+                        "surface-container-highest": "#2d3449",
+                        "on-primary": "#442c00",
+                        "primary-container": "#ffcd82",
+                        "primary-fixed-dim": "#efbe75",
+                        "tertiary-fixed-dim": "#fcb973",
+                        "on-primary-container": "#795515",
+                        "surface": "#0b1326",
+                        "on-surface": "#dae2fd",
+                        "surface-variant": "#2d3449",
+                        "on-secondary-fixed": "#001e2c",
+                        "secondary-container": "#00a6e0",
+                        "surface-bright": "#31394d",
+                        "surface-dim": "#0b1326",
+                        "background": "#0b1326",
+                        "surface-tint": "#efbe75",
+                        "surface-container-low": "#131b2e",
+                        "surface-container": "#171f33",
+                        "surface-container-lowest": "#060e20",
+                        "on-secondary-container": "#00374d",
+                        "secondary": "#7bd0ff",
+                        "outline": "#9b8f80",
+                        "outline-variant": "#4f4539",
+                        "on-surface-variant": "#d3c4b4",
+                        "primary": "#ffefdd",
+                        "on-primary-fixed": "#281800",
+                        "inverse-primary": "#7c5818",
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #0b1326;
+            color: #dae2fd;
+            overflow-x: hidden;
+            min-height: 100dvh;
+        }
+
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            display: inline-block;
+            vertical-align: middle;
+            line-height: 1;
+        }
+
+        /* ─── Atmospheric glows ─── */
+        .glow {
+            position: fixed;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 0;
+            filter: blur(100px);
+            opacity: 0.14;
+        }
+
+        .glow-top {
+            width: 560px;
+            height: 400px;
+            background: #ffcd82;
+            top: -160px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .glow-left {
+            width: 320px;
+            height: 320px;
+            background: #7bd0ff;
+            top: 40%;
+            left: -80px;
+        }
+
+        .glow-right {
+            width: 380px;
+            height: 380px;
+            background: #efbe75;
+            bottom: -100px;
+            right: -80px;
+        }
+
+        /* Subtle dot grid */
+        .grid-bg {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            pointer-events: none;
+            background-image: radial-gradient(rgba(218, 226, 253, 0.04) 1px, transparent 1px);
+            background-size: 28px 28px;
+        }
+
+        /* ─── Navbar ─── */
+        .navbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 100;
+            height: 60px;
+            padding: 0 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(11, 19, 38, 0.8);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+            border-bottom: 1px solid rgba(255, 205, 130, 0.07);
+            transition: background 0.3s;
+        }
+
+        .navbar.solid {
+            background: rgba(11, 19, 38, 0.97);
+            box-shadow: 0 1px 20px rgba(0, 0, 0, 0.5);
+        }
+
+        /* ─── Glass card ─── */
+        .glass {
+            background: rgba(19, 27, 46, 0.7);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 205, 130, 0.11);
+            border-radius: 18px;
+        }
+
+        /* gradient border accent */
+        .glass::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            padding: 1px;
+            background: linear-gradient(135deg, rgba(255, 205, 130, 0.3), rgba(123, 208, 255, 0.15), transparent 65%);
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            pointer-events: none;
+        }
+
+        /* ─── Peach CTA glow ─── */
+        .btn-peach {
+            background: linear-gradient(135deg, #ffcd82, #fdb974);
+            color: #442c00;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-weight: 800;
+            box-shadow: 0 0 28px -6px rgba(255, 205, 130, 0.45), 0 6px 20px -6px rgba(255, 205, 130, 0.3);
+            transition: opacity 0.2s, transform 0.2s, box-shadow 0.2s;
+            text-decoration: none;
+        }
+
+        .btn-peach:hover {
+            opacity: 0.93;
+            box-shadow: 0 0 44px -4px rgba(255, 205, 130, 0.55), 0 8px 28px -4px rgba(255, 205, 130, 0.35);
+        }
+
+        .btn-peach:active {
+            transform: scale(0.97);
+        }
+
+        /* ─── Scroll reveal ─── */
+        .reveal {
+            opacity: 0;
+            transform: translateY(26px);
+            transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1), transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .reveal.visible {
+            opacity: 1;
+            transform: none;
+        }
+
+        /* ─── Feature card ─── */
+        .feat {
+            background: rgba(23, 31, 51, 0.65);
+            border: 1px solid rgba(255, 205, 130, 0.09);
+            border-radius: 16px;
+            padding: 1.6rem;
+            transition: transform 0.28s, border-color 0.28s, box-shadow 0.28s;
+        }
+
+        .feat:hover {
+            transform: translateY(-4px);
+            border-color: rgba(255, 205, 130, 0.22);
+            box-shadow: 0 16px 40px -12px rgba(0, 0, 0, 0.55);
+        }
+
+        /* ─── Recruiter card hover ─── */
+        .rec-card {
+            transition: border-color 0.2s, background 0.2s;
+        }
+
+        .rec-card:hover {
+            border-color: rgba(123, 208, 255, 0.38) !important;
+        }
+
+        /* ─── Ticker ─── */
+        .ticker-wrap {
+            overflow: hidden;
+            -webkit-mask-image: linear-gradient(to right, transparent, #000 14%, #000 86%, transparent);
+            mask-image: linear-gradient(to right, transparent, #000 14%, #000 86%, transparent);
+        }
+
+        .ticker-inner {
+            display: flex;
+            width: max-content;
+            animation: tick 30s linear infinite;
+        }
+
+        .ticker-inner:hover {
+            animation-play-state: paused;
+        }
+
+        @keyframes tick {
+            from {
+                transform: translateX(0);
+            }
+
+            to {
+                transform: translateX(-50%);
+            }
+        }
+
+        /* ─── Step pills ─── */
+        .step-num {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            font-weight: 600;
+            border: 1px solid rgba(255, 205, 130, 0.3);
+            background: rgba(255, 205, 130, 0.08);
+            color: #ffcd82;
+        }
+
+        a {
+            text-decoration: none;
+        }
+
+        /* ─── Responsive overrides ─── */
+
+        /* Hide GitHub sign-in button in nav on small screens */
+        @media (max-width: 640px) {
+            .hide-sm {
+                display: none !important;
+            }
+        }
+
+        /* Navbar: tighten padding on very small phones */
+        @media (max-width: 400px) {
+            .navbar {
+                padding: 0 0.75rem;
+                gap: 0.5rem;
+            }
+
+            .navbar a[href='/'] span {
+                font-size: 1rem;
+            }
+        }
+
+        /* Hero section: reduce top/bottom padding on phones */
+        @media (max-width: 640px) {
+            section.hero-section {
+                padding-top: 5.5rem;
+                padding-bottom: 2rem;
+            }
+
+            /* CTA card: go edge-to-edge with small margin */
+            .cta-card {
+                max-width: 100%;
+                padding: 1rem;
+            }
+
+            /* Security note text: allow wrapping */
+            .security-note {
+                text-align: center;
+                max-width: 280px;
+            }
+        }
+
+        /* How-it-works steps: ensure icon doesn't shrink */
+        .step-row {
+            align-items: flex-start;
+        }
+
+        @media (max-width: 400px) {
+            .step-row {
+                gap: 0.75rem;
+            }
+
+            .step-row p {
+                font-size: 12px;
+            }
+        }
+
+        /* Final CTA card: reduce padding on phones */
+        @media (max-width: 640px) {
+            .final-cta {
+                padding: 2rem 1.25rem;
+            }
+
+            .final-cta h2 {
+                font-size: 1.6rem;
+            }
+
+            .final-cta .cta-desc {
+                max-width: 100%;
+            }
+        }
+
+        /* Disable hover lift on touch to prevent sticky hover state */
+        @media (hover: none) {
+            .feat:hover {
+                transform: none;
+                box-shadow: none;
+                border-color: rgba(255, 205, 130, 0.09);
+            }
+
+            .btn-peach:hover {
+                opacity: 1;
+                box-shadow: 0 0 28px -6px rgba(255, 205, 130, 0.45), 0 6px 20px -6px rgba(255, 205, 130, 0.3);
+            }
+
+            .rec-card:hover {
+                border-color: rgba(79, 69, 57, 0.35) !important;
+            }
+        }
+
+        /* Tablet (641–1023px): features grid 2 cols already via sm:grid-cols-2 */
+        /* Ensure sections don't overflow on mid-width */
+        @media (max-width: 1023px) {
+            .max-w-5xl {
+                max-width: 100%;
+            }
+        }
+
+        /* Prevent horizontal scroll caused by fixed glows on narrow screens */
+        @media (max-width: 480px) {
+            .glow-left {
+                width: 180px;
+                height: 180px;
+                left: -60px;
+            }
+
+            .glow-right {
+                width: 220px;
+                height: 220px;
+                right: -60px;
+            }
+
+            .glow-top {
+                width: 300px;
+                height: 240px;
+            }
+        }
+    </style>
 </head>
 
 <body>
+    <!-- Atmospheric glows -->
+    <div class="glow glow-top"></div>
+    <div class="glow glow-left"></div>
+    <div class="glow glow-right"></div>
+    <div class="grid-bg"></div>
 
-    <nav class="glass-nav">
-        <div class="logo">GitHub Intelligence</div>
-        <div class="nav-links">
-            <a href="#features">Features</a>
-            <a href="/app.html" class="btn-primary" style="margin-left: 2rem;">Go to App</a>
+    <!-- ═══════════════ NAVBAR ═══════════════ -->
+    <nav class="navbar" id="navbar">
+        <a href="/" class="flex items-center gap-2.5">
+            <div
+                class="w-8 h-8 rounded-lg bg-surface-container-high border border-outline-variant/40 flex items-center justify-center text-primary-container">
+                <span class="material-symbols-outlined" style="font-size:17px;">data_object</span>
+            </div>
+            <span
+                style="font-family:'Plus Jakarta Sans',sans-serif; font-weight:800; font-size:1.1rem; color:#ffefdd; letter-spacing:-0.02em;">GitView</span>
+        </a>
+
+        <div class="flex items-center gap-2.5">
+            <!-- Recruiter nav link -->
+            <a href="/app.html" id="nav-rec"
+                class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-secondary text-xs font-semibold border border-secondary/30 bg-secondary/5 hover:bg-secondary/10 transition-colors">
+                Recruiter Portal
+                <span class="material-symbols-outlined" style="font-size:14px;">arrow_forward</span>
+            </a>
+            <!-- GitHub Sign in (hide on very small screens) -->
+            <a href="/auth/github"
+                class="hide-sm btn-peach inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm">
+                <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                    <path clip-rule="evenodd"
+                        d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"
+                        fill-rule="evenodd" />
+                </svg>
+                Sign in with GitHub
+            </a>
         </div>
     </nav>
 
-    <section class="hero">
-        <h1 class="animate-up">Elevate your <span>GitHub</span> Presence</h1>
-        <p class="animate-up delay-1">AI-powered analytics and portfolio enhancement for both developers looking to
-            stand out, and recruiters seeking the perfect candidate.</p>
-        <div class="hero-btns animate-up delay-2">
-            <a href="/app.html" class="btn-primary">Launch App</a>
-            <a href="#features" class="btn-outline">Explore Features</a>
+    <!-- ═══════════════ HERO ═══════════════ -->
+    <main class="relative z-10">
+        <section
+            class="hero-section min-h-screen flex flex-col items-center justify-center text-center px-5 pt-24 pb-16">
+
+            <!-- Eyebrow -->
+            <div
+                class="reveal inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-surface-container border border-outline-variant/30 mb-6">
+                <span class="material-symbols-outlined text-primary-container"
+                    style="font-size:14px;">account_tree</span>
+                <span
+                    style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:#d3c4b4;">GitHub
+                    Portfolio Tool</span>
+            </div>
+
+            <!-- Headline -->
+            <h1 class="reveal"
+                style="font-family:'Plus Jakarta Sans',sans-serif; font-weight:900; font-size:clamp(2rem,5.5vw,3.8rem); line-height:1.08; letter-spacing:-0.03em; color:#ffefdd; max-width:760px; transition-delay:0.05s;">
+                Make your GitHub profile<br />
+                <span
+                    style="background:linear-gradient(90deg,#ffcd82,#fdb974,#7bd0ff); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;">
+                    easy to understand.
+                </span>
+            </h1>
+
+            <!-- Sub-headline — honest description -->
+            <p class="reveal"
+                style="font-size:1.05rem; color:#d3c4b4; max-width:520px; margin-top:1.25rem; line-height:1.7; transition-delay:0.1s;">
+                GitView reads your public GitHub data, organises your repositories into categories,
+                calculates an engineering score from your activity, and gives recruiters a clear picture
+                of what you've actually built.
+            </p>
+
+            <!-- CTA card -->
+            <div class="cta-card reveal relative glass w-full max-w-[400px] mt-10 p-5 shadow-[0_24px_60px_-16px_rgba(6,14,32,0.9)]"
+                style="transition-delay:0.15s;">
+                <!-- Top shimmer line -->
+                <div class="absolute inset-x-0 top-0 h-px rounded-t-2xl pointer-events-none"
+                    style="background:linear-gradient(90deg,transparent,rgba(255,205,130,0.4),transparent);"></div>
+
+                <!-- Aspirant section -->
+                <div class="flex items-center gap-2 mb-3">
+                    <span class="material-symbols-outlined text-primary-container"
+                        style="font-size:15px;">terminal</span>
+                    <span
+                        style="font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.1em; color:#ffefdd; font-weight:600;">For
+                        Engineers</span>
+                    <span class="ml-auto"
+                        style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#7bd0ff; background:rgba(123,208,255,0.1); border:1px solid rgba(123,208,255,0.2); padding:2px 8px; border-radius:999px;">Free</span>
+                </div>
+
+                <a href="/auth/github"
+                    class="btn-peach w-full flex items-center justify-center gap-3 px-5 py-3.5 rounded-xl text-[15px] group">
+                    <svg class="w-5 h-5 fill-current shrink-0" viewBox="0 0 24 24">
+                        <path clip-rule="evenodd"
+                            d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"
+                            fill-rule="evenodd" />
+                    </svg>
+                    Analyse My GitHub Profile
+                    <span class="material-symbols-outlined ml-auto transition-transform group-hover:translate-x-0.5"
+                        style="font-size:18px;">arrow_forward</span>
+                </a>
+
+                <p style="font-size:11px; color:#9b8f80; text-align:center; margin-top:10px;">
+                    Read-only access to your public repositories · No private data is read
+                </p>
+
+                <!-- Divider -->
+                <div class="relative flex items-center justify-center my-4">
+                    <div class="w-full" style="border-top:1px solid rgba(79,69,57,0.35);"></div>
+                    <span class="absolute px-3"
+                        style="background:#171f33; font-family:'JetBrains Mono',monospace; font-size:10px; color:#9b8f80; text-transform:uppercase; letter-spacing:0.1em;">or</span>
+                </div>
+
+                <!-- Recruiter entry -->
+                <a href="/app.html" id="recruiter-bypass-btn"
+                    class="rec-card flex items-center justify-between p-3 rounded-xl border border-outline-variant/30 bg-surface-container-low/80">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-9 h-9 rounded-lg flex items-center justify-center"
+                            style="background:rgba(123,208,255,0.08); border:1px solid rgba(123,208,255,0.2); color:#7bd0ff; flex-shrink:0;">
+                            <span class="material-symbols-outlined" style="font-size:18px;">badge</span>
+                        </div>
+                        <div>
+                            <div style="font-size:12px; font-weight:600; color:#ffefdd;">Recruiter Portal</div>
+                            <div style="font-size:11px; color:#d3c4b4;">Search &amp; browse candidate profiles</div>
+                        </div>
+                    </div>
+                    <div class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-secondary text-xs font-semibold border border-secondary/30 bg-surface-container-high hover:bg-surface-bright transition-colors"
+                        style="flex-shrink:0;">
+                        Enter
+                        <span class="material-symbols-outlined" style="font-size:13px;">arrow_forward</span>
+                    </div>
+                </a>
+                <p style="font-size:11px; color:#9b8f80; margin-top:8px; display:flex; align-items:center; gap:6px;">
+                    <span class="material-symbols-outlined text-secondary" style="font-size:13px;">check_circle</span>
+                    No GitHub login required for recruiters
+                </p>
+            </div>
+
+            <!-- Simple security note -->
+            <div class="reveal mt-6" style="transition-delay:0.2s;">
+                <div class="security-note inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-outline-variant/20"
+                    style="background:rgba(6,14,32,0.7);">
+                    <span class="material-symbols-outlined"
+                        style="font-size:13px; color:#34d399; flex-shrink:0;">lock</span>
+                    <span style="font-size:11px; color:#d3c4b4;">Reads only public GitHub data · We never touch your
+                        private repositories</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- ═══════════════ TICKER ═══════════════ -->
+        <div
+            style="border-top:1px solid rgba(79,69,57,0.18); border-bottom:1px solid rgba(79,69,57,0.18); background:rgba(6,14,32,0.45); padding:10px 0;">
+            <div class="ticker-wrap">
+                <div class="ticker-inner">
+                    <div class="flex items-center gap-8 px-8 whitespace-nowrap"
+                        style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#9b8f80;">
+                        <span><span style="color:#ffcd82;">◆</span>&nbsp; Profile Score from public activity</span><span
+                            style="color:#4f4539;">·</span>
+                        <span><span style="color:#7bd0ff;">◆</span>&nbsp; Repo categorisation with K-Means</span><span
+                            style="color:#4f4539;">·</span>
+                        <span><span style="color:#34d399;">◆</span>&nbsp; Language breakdown &amp; radar
+                            chart</span><span style="color:#4f4539;">·</span>
+                        <span><span style="color:#ffcd82;">◆</span>&nbsp; Commit history visualised</span><span
+                            style="color:#4f4539;">·</span>
+                        <span><span style="color:#7bd0ff;">◆</span>&nbsp; AI profile improvement suggestions</span><span
+                            style="color:#4f4539;">·</span>
+                        <span><span style="color:#34d399;">◆</span>&nbsp; Recruiter search &amp; candidate
+                            shortlist</span><span style="color:#4f4539;">·</span>
+                        <span><span style="color:#ffcd82;">◆</span>&nbsp; AI-drafted outreach email for
+                            recruiters</span><span style="color:#4f4539;">·</span>
+                    </div>
+                    <!-- clone for seamless loop -->
+                    <div class="flex items-center gap-8 px-8 whitespace-nowrap" aria-hidden="true"
+                        style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#9b8f80;">
+                        <span><span style="color:#ffcd82;">◆</span>&nbsp; Profile Score from public activity</span><span
+                            style="color:#4f4539;">·</span>
+                        <span><span style="color:#7bd0ff;">◆</span>&nbsp; Repo categorisation with K-Means</span><span
+                            style="color:#4f4539;">·</span>
+                        <span><span style="color:#34d399;">◆</span>&nbsp; Language breakdown &amp; radar
+                            chart</span><span style="color:#4f4539;">·</span>
+                        <span><span style="color:#ffcd82;">◆</span>&nbsp; Commit history visualised</span><span
+                            style="color:#4f4539;">·</span>
+                        <span><span style="color:#7bd0ff;">◆</span>&nbsp; AI profile improvement suggestions</span><span
+                            style="color:#4f4539;">·</span>
+                        <span><span style="color:#34d399;">◆</span>&nbsp; Recruiter search &amp; candidate
+                            shortlist</span><span style="color:#4f4539;">·</span>
+                        <span><span style="color:#ffcd82;">◆</span>&nbsp; AI-drafted outreach email for
+                            recruiters</span><span style="color:#4f4539;">·</span>
+                    </div>
+                </div>
+            </div>
         </div>
-    </section>
 
-    <section id="features" class="features">
-        <h2 class="section-title">Everything you need to succeed</h2>
-
-        <div class="grid">
-            <div class="feature-card">
-                <div class="feature-icon">✨</div>
-                <h3>AI Profile Improvements</h3>
-                <p>Get actionable, AI-generated insights to optimize your GitHub readmes, repository descriptions, and
-                    overall profile structure to attract top recruiters.</p>
+        <!-- ═══════════════ HOW IT WORKS ═══════════════ -->
+        <section class="relative z-10 max-w-3xl mx-auto px-5 py-20">
+            <div class="reveal text-center mb-12">
+                <span class="inline-block mb-3 px-3 py-1 rounded-full border"
+                    style="font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.1em; color:#7bd0ff; border-color:rgba(123,208,255,0.2); background:rgba(123,208,255,0.07);">How
+                    it works</span>
+                <h2
+                    style="font-family:'Plus Jakarta Sans',sans-serif; font-weight:800; font-size:clamp(1.6rem,4vw,2.4rem); color:#ffefdd; line-height:1.15; letter-spacing:-0.02em;">
+                    Three steps to a shareable profile</h2>
             </div>
 
-            <div class="feature-card">
-                <div class="feature-icon">🔍</div>
-                <h3>Candidate Search</h3>
-                <p>Powerful search and analytics for recruiters. Instantly analyze a candidate's GitHub footprint,
-                    languages used, and contribution frequency.</p>
+            <div class="space-y-4">
+                <!-- Step 1 -->
+                <div class="step-row reveal flex items-start gap-4 p-5 rounded-2xl"
+                    style="background:rgba(23,31,51,0.6); border:1px solid rgba(255,205,130,0.1); transition-delay:0.05s;">
+                    <div class="step-num">01</div>
+                    <div>
+                        <div
+                            style="font-family:'Plus Jakarta Sans',sans-serif; font-weight:700; font-size:15px; color:#ffefdd; margin-bottom:4px;">
+                            Connect with GitHub</div>
+                        <p style="font-size:13px; color:#d3c4b4; line-height:1.6;">Sign in with your GitHub account. We
+                            request read-only permission to access your public repositories, commit counts, and language
+                            stats. No code is stored.</p>
+                    </div>
+                </div>
+
+                <!-- Step 2 -->
+                <div class="step-row reveal flex items-start gap-4 p-5 rounded-2xl"
+                    style="background:rgba(23,31,51,0.6); border:1px solid rgba(255,205,130,0.1); transition-delay:0.1s;">
+                    <div class="step-num">02</div>
+                    <div>
+                        <div
+                            style="font-family:'Plus Jakarta Sans',sans-serif; font-weight:700; font-size:15px; color:#ffefdd; margin-bottom:4px;">
+                            See your profile analysed</div>
+                        <p style="font-size:13px; color:#d3c4b4; line-height:1.6;">GitView calculates a score based on
+                            your public activity — commit frequency, language diversity, and repository descriptions.
+                            Repositories are grouped into categories using K-Means clustering so your work areas are
+                            immediately clear.</p>
+                    </div>
+                </div>
+
+                <!-- Step 3 -->
+                <div class="step-row reveal flex items-start gap-4 p-5 rounded-2xl"
+                    style="background:rgba(23,31,51,0.6); border:1px solid rgba(255,205,130,0.1); transition-delay:0.15s;">
+                    <div class="step-num">03</div>
+                    <div>
+                        <div
+                            style="font-family:'Plus Jakarta Sans',sans-serif; font-weight:700; font-size:15px; color:#ffefdd; margin-bottom:4px;">
+                            Get AI-written suggestions &amp; share</div>
+                        <p style="font-size:13px; color:#d3c4b4; line-height:1.6;">Gemini reads your profile data and
+                            writes plain-English improvement suggestions. Your scored profile can then be discovered by
+                            recruiters using the Recruiter Portal — no extra setup needed.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ═══════════════ FEATURES ═══════════════ -->
+        <section class="relative z-10 max-w-5xl mx-auto px-5 pb-20">
+            <div class="reveal text-center mb-10">
+                <span class="inline-block mb-3 px-3 py-1 rounded-full border"
+                    style="font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.1em; color:#ffcd82; border-color:rgba(255,205,130,0.2); background:rgba(255,205,130,0.07);">What's
+                    included</span>
+                <h2
+                    style="font-family:'Plus Jakarta Sans',sans-serif; font-weight:800; font-size:clamp(1.6rem,4vw,2.4rem); color:#ffefdd; line-height:1.15; letter-spacing:-0.02em;">
+                    Everything in one place</h2>
             </div>
 
-            <div class="feature-card">
-                <div class="feature-icon">✉️</div>
-                <h3>Smart Outreach Pitch</h3>
-                <p>Generate highly personalized and compelling recruitment outreach emails based on the candidate's
-                    specific GitHub activity and top repositories.</p>
-            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
 
-            <div class="feature-card">
-                <div class="feature-icon">📊</div>
-                <h3>Deep Repository Analytics</h3>
-                <p>Go beyond surface metrics. Dive deep into a candidate's recent commits, pull requests, and the
-                    specific technologies they master.</p>
+                <div class="reveal feat" style="transition-delay:0.05s;">
+                    <div class="w-10 h-10 rounded-xl flex items-center justify-center mb-4"
+                        style="background:rgba(255,205,130,0.1); border:1px solid rgba(255,205,130,0.2); color:#ffcd82;">
+                        <span class="material-symbols-outlined" style="font-size:20px;">bar_chart</span>
+                    </div>
+                    <h3
+                        style="font-family:'Plus Jakarta Sans',sans-serif; font-weight:700; font-size:14px; color:#ffefdd; margin-bottom:6px;">
+                        Engineering Score</h3>
+                    <p style="font-size:13px; color:#d3c4b4; line-height:1.6;">A numeric score calculated from your
+                        public commit history, repository count, language spread, and account longevity.</p>
+                </div>
+
+                <div class="reveal feat" style="transition-delay:0.08s;">
+                    <div class="w-10 h-10 rounded-xl flex items-center justify-center mb-4"
+                        style="background:rgba(123,208,255,0.1); border:1px solid rgba(123,208,255,0.2); color:#7bd0ff;">
+                        <span class="material-symbols-outlined" style="font-size:20px;">category</span>
+                    </div>
+                    <h3
+                        style="font-family:'Plus Jakarta Sans',sans-serif; font-weight:700; font-size:14px; color:#ffefdd; margin-bottom:6px;">
+                        Repo Categorisation</h3>
+                    <p style="font-size:13px; color:#d3c4b4; line-height:1.6;">K-Means clustering groups your
+                        repositories into labelled categories, making your specialisations clear without manual tagging.
+                    </p>
+                </div>
+
+                <div class="reveal feat" style="transition-delay:0.11s;">
+                    <div class="w-10 h-10 rounded-xl flex items-center justify-center mb-4"
+                        style="background:rgba(52,211,153,0.1); border:1px solid rgba(52,211,153,0.2); color:#34d399;">
+                        <span class="material-symbols-outlined" style="font-size:20px;">radar</span>
+                    </div>
+                    <h3
+                        style="font-family:'Plus Jakarta Sans',sans-serif; font-weight:700; font-size:14px; color:#ffefdd; margin-bottom:6px;">
+                        Language Radar</h3>
+                    <p style="font-size:13px; color:#d3c4b4; line-height:1.6;">A radar chart built from your public repo
+                        language data, showing your stack at a glance.</p>
+                </div>
+
+                <div class="reveal feat" style="transition-delay:0.14s;">
+                    <div class="w-10 h-10 rounded-xl flex items-center justify-center mb-4"
+                        style="background:rgba(255,205,130,0.1); border:1px solid rgba(255,205,130,0.2); color:#ffcd82;">
+                        <span class="material-symbols-outlined" style="font-size:20px;">auto_awesome</span>
+                    </div>
+                    <h3
+                        style="font-family:'Plus Jakarta Sans',sans-serif; font-weight:700; font-size:14px; color:#ffefdd; margin-bottom:6px;">
+                        AI Improvement Suggestions</h3>
+                    <p style="font-size:13px; color:#d3c4b4; line-height:1.6;">Gemini reviews your profile data and
+                        writes specific, actionable suggestions to improve your GitHub presence.</p>
+                </div>
+
+                <div class="reveal feat" style="transition-delay:0.17s;">
+                    <div class="w-10 h-10 rounded-xl flex items-center justify-center mb-4"
+                        style="background:rgba(123,208,255,0.1); border:1px solid rgba(123,208,255,0.2); color:#7bd0ff;">
+                        <span class="material-symbols-outlined" style="font-size:20px;">manage_search</span>
+                    </div>
+                    <h3
+                        style="font-family:'Plus Jakarta Sans',sans-serif; font-weight:700; font-size:14px; color:#ffefdd; margin-bottom:6px;">
+                        Recruiter Search</h3>
+                    <p style="font-size:13px; color:#d3c4b4; line-height:1.6;">Recruiters can search for and compare
+                        analysed candidates directly — no GitHub account needed to browse.</p>
+                </div>
+
+                <div class="reveal feat" style="transition-delay:0.2s;">
+                    <div class="w-10 h-10 rounded-xl flex items-center justify-center mb-4"
+                        style="background:rgba(255,205,130,0.1); border:1px solid rgba(255,205,130,0.2); color:#ffcd82;">
+                        <span class="material-symbols-outlined" style="font-size:20px;">mail</span>
+                    </div>
+                    <h3
+                        style="font-family:'Plus Jakarta Sans',sans-serif; font-weight:700; font-size:14px; color:#ffefdd; margin-bottom:6px;">
+                        AI Outreach Drafts</h3>
+                    <p style="font-size:13px; color:#d3c4b4; line-height:1.6;">Recruiters can generate a personalised
+                        outreach email draft for any candidate, powered by Gemini.</p>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- ═══════════════ FINAL CTA ═══════════════ -->
+        <section class="relative z-10 px-5 pb-20">
+            <div
+                class="final-cta reveal relative glass max-w-xl mx-auto p-10 text-center shadow-[0_32px_80px_-20px_rgba(6,14,32,0.9)]">
+                <div class="absolute inset-x-0 top-0 h-px rounded-t-2xl pointer-events-none"
+                    style="background:linear-gradient(90deg,transparent,rgba(255,205,130,0.4),transparent);"></div>
+                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full mb-5 border"
+                    style="border-color:rgba(255,205,130,0.2); background:rgba(255,205,130,0.07);">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-400" style="animation:pulse 2s infinite;"></span>
+                    <span
+                        style="font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.1em; color:#ffcd82;">Ready?</span>
+                </div>
+                <h2
+                    style="font-family:'Plus Jakarta Sans',sans-serif; font-weight:900; font-size:clamp(1.7rem,4vw,2.5rem); color:#ffefdd; line-height:1.12; letter-spacing:-0.02em; margin-bottom:12px;">
+                    See what your GitHub<br />profile actually says.
+                </h2>
+                <p class="cta-desc"
+                    style="font-size:13px; color:#d3c4b4; max-width:380px; margin:0 auto 28px; line-height:1.7;">
+                    Connect your GitHub in one click. GitView will analyse your public activity and organise everything
+                    into a clean, readable profile.
+                </p>
+                <a href="/auth/github"
+                    class="btn-peach inline-flex items-center justify-center gap-3 px-7 py-4 rounded-2xl text-base group">
+                    <svg class="w-5 h-5 fill-current shrink-0" viewBox="0 0 24 24">
+                        <path clip-rule="evenodd"
+                            d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"
+                            fill-rule="evenodd" />
+                    </svg>
+                    Analyse My Profile — It's Free
+                    <span class="material-symbols-outlined transition-transform group-hover:translate-x-0.5"
+                        style="font-size:20px;">arrow_forward</span>
+                </a>
+                <p style="font-size:11px; color:#9b8f80; margin-top:14px;">Public repos only · No private code access ·
+                    Read-only</p>
+            </div>
+        </section>
+    </main>
+
+    <!-- ═══════════════ FOOTER ═══════════════ -->
+    <footer style="border-top:1px solid rgba(79,69,57,0.15); padding:20px 24px;">
+        <div class="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div class="flex items-center gap-2">
+                <div class="w-6 h-6 rounded flex items-center justify-center"
+                    style="background:#222a3d; border:1px solid rgba(79,69,57,0.4); color:#ffcd82;">
+                    <span class="material-symbols-outlined" style="font-size:13px;">data_object</span>
+                </div>
+                <span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#9b8f80;">© 2025
+                    GitView</span>
+            </div>
+            <div class="flex items-center gap-4"
+                style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#9b8f80;">
+                <a href="#" class="hover:text-primary transition-colors" style="color:inherit;">Privacy</a>
+                <span style="color:#4f4539;">•</span>
+                <a href="#" class="hover:text-primary transition-colors" style="color:inherit;">Security</a>
+                <span style="color:#4f4539;">•</span>
+                <a href="/app.html" style="color:#7bd0ff;">Recruiter Portal</a>
             </div>
         </div>
-    </section>
-
-    <footer>
-        <p>&copy; 2026 GitHub Portfolio Intelligence. All rights reserved.</p>
     </footer>
 
+    <!-- ═══════════════ SCRIPTS ═══════════════ -->
+    <script>
+        // Navbar scroll effect
+        const nb = document.getElementById('navbar');
+        window.addEventListener('scroll', () => nb.classList.toggle('solid', window.scrollY > 16), { passive: true });
+
+        // Scroll reveal
+        const obs = new IntersectionObserver(entries => {
+            entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); obs.unobserve(e.target); } });
+        }, { threshold: 0.1 });
+        document.querySelectorAll('.reveal').forEach(el => obs.observe(el));
+
+        // Recruiter bypass - set role then navigate
+        function goRecruiter(e) {
+            e.preventDefault();
+            sessionStorage.setItem('gitview_role', 'recruiter');
+            window.location.href = '/app.html';
+        }
+        document.getElementById('recruiter-bypass-btn').addEventListener('click', goRecruiter);
+        document.getElementById('nav-rec').addEventListener('click', goRecruiter);
+    </script>
 </body>
 
 </html>
