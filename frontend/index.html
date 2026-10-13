@@ -790,7 +790,7 @@
                 <span style="color:#4f4539;">•</span>
                 <a href="#" class="hover:text-primary transition-colors" style="color:inherit;">Security</a>
                 <span style="color:#4f4539;">•</span>
-                <a href="/app.html" style="color:#7bd0ff;">Recruiter Portal</a>
+                <a href="/app.html" id="footer-rec" style="color:#7bd0ff;">Recruiter Portal</a>
             </div>
         </div>
     </footer>
@@ -807,14 +807,45 @@
         }, { threshold: 0.1 });
         document.querySelectorAll('.reveal').forEach(el => obs.observe(el));
 
-        // Recruiter bypass - set role then navigate
+        // Aspirant action - explicitly set role to aspirant
+        function goAspirant() {
+            localStorage.setItem('role', 'aspirant');
+            sessionStorage.setItem('gitview_role', 'aspirant');
+        }
+
+        // Attach aspirant role setter to all "Analyse My GitHub..." and auth buttons
+        document.querySelectorAll('a[href="/auth/github"]').forEach(link => {
+            link.addEventListener('click', goAspirant);
+        });
+
+        // Recruiter action - explicitly set role to recruiter then navigate
         function goRecruiter(e) {
             e.preventDefault();
+            localStorage.setItem('role', 'recruiter');
             sessionStorage.setItem('gitview_role', 'recruiter');
-            window.location.href = '/app.html';
+            window.location.href = '/app.html?role=recruiter';
         }
-        document.getElementById('recruiter-bypass-btn').addEventListener('click', goRecruiter);
-        document.getElementById('nav-rec').addEventListener('click', goRecruiter);
+
+        const recBypassBtn = document.getElementById('recruiter-bypass-btn');
+        const navRecBtn = document.getElementById('nav-rec');
+        const footerRecBtn = document.getElementById('footer-rec');
+        if (recBypassBtn) recBypassBtn.addEventListener('click', goRecruiter);
+        if (navRecBtn) navRecBtn.addEventListener('click', goRecruiter);
+        if (footerRecBtn) footerRecBtn.addEventListener('click', goRecruiter);
+
+        // Check if user is already authenticated
+        fetch('/auth/check')
+            .then(res => res.json())
+            .then(data => {
+                if (data.authenticated) {
+                    // Update aspirant CTA links to direct dashboard
+                    document.querySelectorAll('a[href="/auth/github"]').forEach(link => {
+                        link.setAttribute('href', '/app.html?role=aspirant');
+                        link.addEventListener('click', goAspirant);
+                    });
+                }
+            })
+            .catch(() => {});
     </script>
 </body>
 
