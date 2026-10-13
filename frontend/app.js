@@ -12,7 +12,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Navigation and Action buttons
     const backHomeBtn = document.getElementById('back-home-btn');
-    const switchRoleBtn = document.getElementById('switch-role-btn');
+    const topHomepageBtn = document.getElementById('top-homepage-btn');
     const logoutBtn = document.getElementById('logout-btn');
     const roleIndicator = document.getElementById('current-role-indicator');
 
@@ -153,27 +153,24 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // Switch Role button in dashboard
-    if (switchRoleBtn) {
-        switchRoleBtn.addEventListener('click', () => {
-            dashboardSection.style.display = 'none';
-            loginSection.style.display = 'block';
-            resultsBox.style.display = 'none';
-            favoritesSection.style.display = 'none';
-            hideClusterResults();
-            updateRoleSelectionUI(currentRole);
+    // Back button in dashboard - navigate back to app.html
+    if (backHomeBtn) {
+        backHomeBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            const target = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+                ? '/app.html'
+                : 'https://gitview-sooty.vercel.app/app.html';
+            window.location.href = target;
         });
     }
 
-    // Back button in dashboard
-    if (backHomeBtn) {
-        backHomeBtn.addEventListener('click', () => {
-            dashboardSection.style.display = 'none';
-            loginSection.style.display = 'block';
-            resultsBox.style.display = 'none';
-            favoritesSection.style.display = 'none';
-            hideClusterResults();
-            updateRoleSelectionUI(currentRole);
+    // Top-left corner HomePage button - navigate to landing page
+    if (topHomepageBtn) {
+        topHomepageBtn.addEventListener('click', (e) => {
+            if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                e.preventDefault();
+                window.location.href = '/';
+            }
         });
     }
 
