@@ -198,9 +198,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // Check Authentication on Page Load
-    const urlParams = new URLSearchParams(window.location.search);
-    const roleParam = urlParams.get('role');
-
     try {
         const response = await fetch('/auth/check');
         const data = await response.json();
@@ -212,44 +209,25 @@ document.addEventListener('DOMContentLoaded', async () => {
                 loggedInUsernameEl.textContent = `@${currentUser.username || currentUser.login}`;
                 userStatusBar.style.display = 'block';
             }
-
-            // CRITICAL: If the URL explicitly specifies a role (e.g. from clicking on landing page), honor it.
-            // Otherwise, let the signed-in user CHOOSE their role on the role selection card!
-            if (roleParam === 'recruiter') {
-                const recRadio = document.querySelector('input[name="role"][value="recruiter"]');
-                if (recRadio) recRadio.checked = true;
-                enterDashboard('recruiter');
-            } else if (roleParam === 'aspirant') {
-                const aspRadio = document.querySelector('input[name="role"][value="aspirant"]');
-                if (aspRadio) aspRadio.checked = true;
-                enterDashboard('aspirant');
-            } else {
-                // User is signed in, but no URL param: show role selection so they can CHOOSE their role!
-                loginSection.style.display = 'block';
-                dashboardSection.style.display = 'none';
-                const checked = document.querySelector('input[name="role"]:checked');
-                updateRoleSelectionUI(checked ? checked.value : 'aspirant');
-            }
         } else {
-            // NOT authenticated
+            currentUser = null;
             if (logoutBtn) logoutBtn.style.display = 'none';
             if (userStatusBar) userStatusBar.style.display = 'none';
-
-            if (roleParam === 'recruiter') {
-                const recRadio = document.querySelector('input[name="role"][value="recruiter"]');
-                if (recRadio) recRadio.checked = true;
-                enterDashboard('recruiter');
-            } else {
-                loginSection.style.display = 'block';
-                dashboardSection.style.display = 'none';
-                const checked = document.querySelector('input[name="role"]:checked');
-                updateRoleSelectionUI(checked ? checked.value : 'aspirant');
-            }
         }
+
+        // Always show the role selection card so the user selects their role on app.html
+        loginSection.style.display = 'block';
+        dashboardSection.style.display = 'none';
+        const savedRole = localStorage.getItem('role') || 'aspirant';
+        const matchedRadio = document.querySelector(`input[name="role"][value="${savedRole}"]`);
+        if (matchedRadio) matchedRadio.checked = true;
+        updateRoleSelectionUI(savedRole);
     } catch (err) {
         console.error('Error checking auth', err);
         loginSection.style.display = 'block';
         dashboardSection.style.display = 'none';
+        const checked = document.querySelector('input[name="role"]:checked');
+        updateRoleSelectionUI(checked ? checked.value : 'aspirant');
     }
 
     // Search button click

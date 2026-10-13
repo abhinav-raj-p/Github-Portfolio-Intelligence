@@ -70,20 +70,40 @@ body {
     background-size: 28px 28px;
 }
 
-/* ─── Top Left Corner HomePage Button ─── */
+/* ─── Top Left Corner Home Button ─── */
 .home-top-btn {
     position: absolute;
     top: 24px;
     left: 24px;
     z-index: 100;
     text-decoration: none;
-    font-size: 13px;
-    font-weight: 600;
-    padding: 8px 16px;
+    color: var(--accent-peach);
+    background: rgba(23, 31, 51, 0.85);
+    border: 1px solid rgba(255, 205, 130, 0.35);
+    padding: 8px 12px;
     border-radius: 8px;
     display: inline-flex;
     align-items: center;
-    gap: 6px;
+    justify-content: center;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.home-top-btn:hover {
+    background: rgba(255, 205, 130, 0.18);
+    border-color: var(--accent-peach);
+    color: var(--text-white);
+    transform: translateY(-1px);
+}
+
+.material-symbols-outlined {
+    font-family: 'Material Symbols Outlined';
+    font-weight: normal;
+    font-style: normal;
+    font-size: 20px;
+    line-height: 1;
+    display: inline-block;
+    vertical-align: middle;
 }
 
 @media (max-width: 768px) {
