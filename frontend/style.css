@@ -235,8 +235,6 @@ h1, h2, h3, h4, h5 {
     font-size: 14px;
     font-family: 'Plus Jakarta Sans', sans-serif;
     font-weight: 700;
-    color: #281800 !important;
-    background: linear-gradient(135deg, #ffcd82, #fdb974);
     border: none;
     border-radius: 8px;
     cursor: pointer;
@@ -246,49 +244,97 @@ h1, h2, h3, h4, h5 {
     box-shadow: 0 2px 10px rgba(255, 205, 130, 0.25);
 }
 
-.btn,
-.btn * {
-    color: #281800;
+/* Solid Peach Buttons */
+.btn:not(.btn-outline) {
+    color: #281800 !important;
+    background: linear-gradient(135deg, #ffcd82, #fdb974);
 }
 
-.btn:hover {
+.btn:not(.btn-outline) * {
+    color: #281800 !important;
+}
+
+.btn:not(.btn-outline):hover {
     background: linear-gradient(135deg, #fdb974, #efbe75);
     color: #1a0f00 !important;
     transform: translateY(-1px);
     box-shadow: 0 4px 14px rgba(255, 205, 130, 0.35);
 }
 
-.btn:hover * {
-    color: #1a0f00;
+.btn:not(.btn-outline):hover * {
+    color: #1a0f00 !important;
 }
 
 /* Custom background buttons (Cluster Repos, delete) keep clear white text */
-.btn[style*="background"],
-.btn[style*="background"] * {
+.btn[style*="background"]:not(#save-candidate-btn),
+.btn[style*="background"]:not(#save-candidate-btn) * {
     color: #ffffff !important;
 }
 
-.btn-outline {
-    background-color: rgba(255, 205, 130, 0.05);
-    color: var(--accent-peach) !important;
-    border: 1px solid rgba(255, 205, 130, 0.38);
-    box-shadow: none;
-    font-weight: 600;
-}
-
+/* ─── Outline Buttons: Back, Logout, Saved Candidates, AI Draft Pitch ─── */
 .btn-outline,
-.btn-outline * {
-    color: var(--accent-peach) !important;
+.btn.btn-outline,
+a.btn.btn-outline,
+button.btn.btn-outline,
+#back-home-btn,
+#logout-btn,
+#view-favorites-btn,
+#draft-pitch-btn,
+#close-favorites-btn,
+#recruiter-bypass-btn,
+#direct-analyze-btn {
+    background: rgba(255, 205, 130, 0.08) !important;
+    border: 1px solid rgba(255, 205, 130, 0.45) !important;
+    color: #ffcd82 !important;
+    font-weight: 600 !important;
+    text-decoration: none !important;
+    box-shadow: none !important;
 }
 
-.btn-outline:hover {
-    background-color: rgba(255, 205, 130, 0.16);
-    border-color: var(--accent-peach);
+.btn-outline *,
+.btn.btn-outline *,
+#back-home-btn *,
+#logout-btn *,
+#view-favorites-btn *,
+#draft-pitch-btn * {
+    color: #ffcd82 !important;
+}
+
+.btn-outline:hover,
+.btn.btn-outline:hover,
+a.btn.btn-outline:hover,
+button.btn.btn-outline:hover,
+#back-home-btn:hover,
+#logout-btn:hover,
+#view-favorites-btn:hover,
+#draft-pitch-btn:hover,
+#close-favorites-btn:hover,
+#recruiter-bypass-btn:hover,
+#direct-analyze-btn:hover {
+    background: rgba(255, 205, 130, 0.22) !important;
+    border-color: #ffcd82 !important;
     color: #ffffff !important;
 }
 
-.btn-outline:hover * {
+.btn-outline:hover *,
+.btn.btn-outline:hover *,
+#back-home-btn:hover *,
+#logout-btn:hover *,
+#view-favorites-btn:hover *,
+#draft-pitch-btn:hover * {
     color: #ffffff !important;
+}
+
+/* Save Candidate Button (solid peach button) */
+#save-candidate-btn {
+    background: linear-gradient(135deg, #ffcd82, #fdb974) !important;
+    color: #281800 !important;
+    font-weight: 700 !important;
+}
+
+#save-candidate-btn:hover {
+    background: linear-gradient(135deg, #fdb974, #efbe75) !important;
+    color: #1a0f00 !important;
 }
 
 /* ─── Loading Circle Animation & States ─── */
