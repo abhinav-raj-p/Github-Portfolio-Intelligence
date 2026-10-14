@@ -63,7 +63,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     window.hideClusterResults = hideClusterResults;
 
     // Helper: set button loading state with spinner circle animation
-    function setBtnLoading(btn, isLoading, fallbackText, loadingText = 'Analyzing profile, it may take some time...') {
+    function setBtnLoading(btn, isLoading, fallbackText, loadingText = 'Analyzing profile... This may take a few seconds') {
         if (!btn) return;
         if (isLoading) {
             btn.disabled = true;
@@ -515,7 +515,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         resultsBox.innerHTML = `
             <div class="analyzing-box">
                 <div class="spinner-lg"></div>
-                <div class="analyzing-text">Analyzing profile, it may take some time...</div>
+                <div class="analyzing-text">Analyzing profile... This may take a few seconds</div>
                 <div class="analyzing-sub">Fetching repositories, commit activity &amp; computing engineering metrics...</div>
             </div>
         `;

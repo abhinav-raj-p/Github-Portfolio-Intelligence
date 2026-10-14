@@ -235,7 +235,7 @@ h1, h2, h3, h4, h5 {
     font-size: 14px;
     font-family: 'Plus Jakarta Sans', sans-serif;
     font-weight: 700;
-    color: #442c00;
+    color: #281800 !important;
     background: linear-gradient(135deg, #ffcd82, #fdb974);
     border: none;
     border-radius: 8px;
@@ -246,24 +246,49 @@ h1, h2, h3, h4, h5 {
     box-shadow: 0 2px 10px rgba(255, 205, 130, 0.25);
 }
 
+.btn,
+.btn * {
+    color: #281800;
+}
+
 .btn:hover {
     background: linear-gradient(135deg, #fdb974, #efbe75);
-    color: #281800;
+    color: #1a0f00 !important;
     transform: translateY(-1px);
     box-shadow: 0 4px 14px rgba(255, 205, 130, 0.35);
 }
 
+.btn:hover * {
+    color: #1a0f00;
+}
+
+/* Custom background buttons (Cluster Repos, delete) keep clear white text */
+.btn[style*="background"],
+.btn[style*="background"] * {
+    color: #ffffff !important;
+}
+
 .btn-outline {
-    background-color: transparent;
-    color: var(--accent-peach);
+    background-color: rgba(255, 205, 130, 0.05);
+    color: var(--accent-peach) !important;
     border: 1px solid rgba(255, 205, 130, 0.38);
     box-shadow: none;
+    font-weight: 600;
+}
+
+.btn-outline,
+.btn-outline * {
+    color: var(--accent-peach) !important;
 }
 
 .btn-outline:hover {
-    background-color: rgba(255, 205, 130, 0.12);
+    background-color: rgba(255, 205, 130, 0.16);
     border-color: var(--accent-peach);
-    color: var(--text-white);
+    color: #ffffff !important;
+}
+
+.btn-outline:hover * {
+    color: #ffffff !important;
 }
 
 /* ─── Loading Circle Animation & States ─── */
@@ -276,8 +301,8 @@ h1, h2, h3, h4, h5 {
     display: inline-block;
     width: 16px;
     height: 16px;
-    border: 2px solid rgba(68, 44, 0, 0.3);
-    border-top-color: #442c00;
+    border: 2px solid rgba(40, 24, 0, 0.3);
+    border-top-color: #281800;
     border-radius: 50%;
     animation: gitview-spin 0.75s linear infinite;
     flex-shrink: 0;
@@ -289,15 +314,36 @@ h1, h2, h3, h4, h5 {
     border-top-color: var(--accent-peach);
 }
 
-.btn.loading,
-.btn-outline.loading {
+.btn.loading {
+    color: #281800 !important;
     pointer-events: none;
     cursor: wait;
-    opacity: 0.92;
+    opacity: 0.95;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 8px;
+}
+
+.btn.loading,
+.btn.loading * {
+    color: #281800 !important;
+}
+
+.btn-outline.loading {
+    color: var(--accent-peach) !important;
+    pointer-events: none;
+    cursor: wait;
+    opacity: 0.95;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.btn-outline.loading,
+.btn-outline.loading * {
+    color: var(--accent-peach) !important;
 }
 
 /* Big spinner inside dashboard results container */

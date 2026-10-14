@@ -176,7 +176,7 @@
         /* ─── Peach CTA glow ─── */
         .btn-peach {
             background: linear-gradient(135deg, #ffcd82, #fdb974);
-            color: #442c00;
+            color: #281800 !important;
             font-family: 'Plus Jakarta Sans', sans-serif;
             font-weight: 800;
             box-shadow: 0 0 28px -6px rgba(255, 205, 130, 0.45), 0 6px 20px -6px rgba(255, 205, 130, 0.3);
@@ -184,8 +184,14 @@
             text-decoration: none;
         }
 
+        .btn-peach,
+        .btn-peach * {
+            color: #281800 !important;
+        }
+
         .btn-peach:hover {
             opacity: 0.93;
+            color: #1a0f00 !important;
             box-shadow: 0 0 44px -4px rgba(255, 205, 130, 0.55), 0 8px 28px -4px rgba(255, 205, 130, 0.35);
         }
 
@@ -203,8 +209,8 @@
             display: inline-block;
             width: 18px;
             height: 18px;
-            border: 2.5px solid rgba(68, 44, 0, 0.25);
-            border-top-color: #442c00;
+            border: 2.5px solid rgba(40, 24, 0, 0.3);
+            border-top-color: #281800;
             border-radius: 50%;
             animation: spin 0.75s linear infinite;
             flex-shrink: 0;
@@ -219,6 +225,11 @@
             align-items: center !important;
             justify-content: center !important;
             gap: 10px !important;
+            color: #281800 !important;
+        }
+
+        .btn-peach.loading * {
+            color: #281800 !important;
         }
 
         /* ─── Scroll reveal ─── */
@@ -846,7 +857,7 @@
                 btn.classList.add('loading');
                 btn.innerHTML = `
                     <span class="btn-spinner"></span>
-                    <span>Analyzing profile, it may take some time...</span>
+                    <span style="color:#281800; font-weight:700;">Analyzing profile... This may take a few seconds</span>
                 `;
             }
             window.location.href = '/auth/github';
